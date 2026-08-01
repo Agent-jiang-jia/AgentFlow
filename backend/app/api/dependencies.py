@@ -8,6 +8,7 @@ from app.agent.runtime import AgentRuntime
 from app.core.config import Settings
 from app.db.database import Database
 from app.parsers import ParserRegistry
+from app.services.artifact_service import ArtifactService
 from app.services.chat_service import ChatService
 from app.services.file_service import FileService
 from app.services.health_service import HealthService
@@ -19,7 +20,7 @@ from app.services.web_fetch_service import WebFetchService
 from app.services.web_search_service import WebSearchService
 from app.storage.file_storage import FileStorage
 from app.storage.thread_storage import ThreadStorage
-from app.tools import create_phase_five_registry
+from app.tools import create_phase_six_registry
 from app.tools.executor import ToolExecutor
 
 
@@ -55,6 +56,18 @@ def get_file_service(request: Request) -> FileService:
     )
 
 
+def get_artifact_service(request: Request) -> ArtifactService:
+    """Resolve generated-file creation and delivery orchestration."""
+    database = cast(Database, request.app.state.database)
+    settings = cast(Settings, request.app.state.settings)
+    return ArtifactService(
+        database=database,
+        storage=FileStorage(settings.resolved_data_dir),
+        max_artifact_bytes=settings.max_artifact_size_mb * 1024 * 1024,
+        frame_ancestors=tuple(settings.cors_origins),
+    )
+
+
 def get_chat_service(request: Request) -> ChatService:
     """Resolve the bounded single-agent orchestration and its fixed model."""
     database = cast(Database, request.app.state.database)
@@ -63,11 +76,12 @@ def get_chat_service(request: Request) -> ChatService:
     search_service = cast(WebSearchService, request.app.state.web_search_service)
     fetch_service = cast(WebFetchService, request.app.state.web_fetch_service)
     file_service = get_file_service(request)
-    registry = create_phase_five_registry(
+    registry = create_phase_six_registry(
         search_service=search_service,
         fetch_service=fetch_service,
         source_service=SourceService(database),
         file_service=file_service,
+        artifact_service=get_artifact_service(request),
     )
     executor = ToolExecutor(
         database=database,

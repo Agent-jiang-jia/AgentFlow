@@ -10,6 +10,7 @@ from fastapi.middleware.cors import CORSMiddleware
 from starlette.middleware.base import RequestResponseEndpoint
 from starlette.responses import Response
 
+from app.api.artifacts import router as artifacts_router
 from app.api.chat import router as chat_router
 from app.api.files import router as files_router
 from app.api.health import router as health_router
@@ -80,6 +81,7 @@ def create_app(settings: Settings | None = None) -> FastAPI:
     application.include_router(health_router)
     application.include_router(threads_router)
     application.include_router(files_router)
+    application.include_router(artifacts_router)
     application.include_router(chat_router)
     return application
 

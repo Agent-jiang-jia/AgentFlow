@@ -61,6 +61,6 @@ def delete_file(
     file_id: str,
     service: Annotated[FileService, Depends(get_file_service)],
 ) -> Response:
-    """Delete an upload and its parsed derivative from metadata and disk."""
+    """Delete a thread-owned file and any upload derivative from metadata and disk."""
     service.delete(thread_id=thread_id, file_id=file_id)
     return Response(status_code=status.HTTP_204_NO_CONTENT)

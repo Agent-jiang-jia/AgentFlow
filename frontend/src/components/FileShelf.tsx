@@ -4,10 +4,11 @@ import {
   LoadingOutlined,
   UploadOutlined,
 } from "@ant-design/icons";
-import { Button, Empty, Tag, Tooltip, Typography } from "antd";
+import { Button, Empty, Popconfirm, Tag, Tooltip } from "antd";
 import { useRef } from "react";
 
 import type { FileMetadata } from "../types/api";
+import { formatSize } from "../utils/files";
 
 const ACCEPTED_TYPES = ".pdf,.docx,.txt,.md,.csv";
 
@@ -17,16 +18,6 @@ interface FileShelfProps {
   uploading: boolean;
   onUpload: (file: File) => Promise<void>;
   onDelete: (fileId: string) => Promise<void>;
-}
-
-function formatSize(bytes: number): string {
-  if (bytes < 1024) {
-    return `${bytes} B`;
-  }
-  if (bytes < 1024 * 1024) {
-    return `${(bytes / 1024).toFixed(1)} KB`;
-  }
-  return `${(bytes / (1024 * 1024)).toFixed(1)} MB`;
 }
 
 function statusLabel(status: string | null): string {
@@ -62,13 +53,11 @@ export function FileShelf({
   };
 
   return (
-    <section className="file-shelf" aria-label="会话文件">
-      <div className="file-shelf-heading">
+    <section className="resource-section" aria-labelledby="uploads-title">
+      <div className="resource-heading">
         <div>
-          <Typography.Text className="section-label">
-            FILES / UPLOADS
-          </Typography.Text>
-          <Typography.Text>{files.length} 个上传文件</Typography.Text>
+          <span className="resource-index">INPUT / {String(files.length).padStart(2, "0")}</span>
+          <h2 id="uploads-title">上传资料</h2>
         </div>
         <input
           ref={inputRef}
@@ -86,18 +75,20 @@ export function FileShelf({
           disabled={disabled}
           onClick={() => inputRef.current?.click()}
         >
-          {uploading ? "文件处理中" : "上传文件"}
+          {uploading ? "处理中" : "上传"}
         </Button>
       </div>
 
-      <div className="file-shelf-list">
+      <div className="resource-list">
         {files.length === 0 ? (
-          <Empty image={Empty.PRESENTED_IMAGE_SIMPLE} description="暂无上传文件" />
+          <Empty image={Empty.PRESENTED_IMAGE_SIMPLE} description="上传资料后可让 Agent 读取" />
         ) : (
           files.map((file) => (
-            <article className="file-chip" key={file.id}>
-              <FileTextOutlined />
-              <div className="file-chip-copy">
+            <article className="resource-card upload" key={file.id}>
+              <span className="resource-icon" aria-hidden="true">
+                <FileTextOutlined />
+              </span>
+              <div className="resource-copy">
                 <Tooltip title={file.original_name}>
                   <strong>{file.original_name}</strong>
                 </Tooltip>
@@ -108,15 +99,23 @@ export function FileShelf({
               <Tag className={`parse-status ${file.parse_status ?? "unknown"}`}>
                 {statusLabel(file.parse_status)}
               </Tag>
-              <Button
-                type="text"
-                size="small"
-                danger
-                icon={<DeleteOutlined />}
+              <Popconfirm
+                title="删除这个文件？"
+                description="原文件和解析结果将一并删除。"
+                okText="删除"
+                cancelText="取消"
                 disabled={disabled}
-                aria-label={`删除 ${file.original_name}`}
-                onClick={() => void onDelete(file.id)}
-              />
+                onConfirm={() => void onDelete(file.id)}
+              >
+                <Button
+                  type="text"
+                  size="small"
+                  danger
+                  icon={<DeleteOutlined />}
+                  disabled={disabled}
+                  aria-label={`删除 ${file.original_name}`}
+                />
+              </Popconfirm>
             </article>
           ))
         )}

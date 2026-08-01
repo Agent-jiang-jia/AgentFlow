@@ -15,6 +15,7 @@ const file: FileMetadata = {
   parse_status: "success",
   parse_error: null,
   parsed_file_id: "parsed-id",
+  description: null,
   created_at: "2026-08-01T00:00:00Z",
 };
 

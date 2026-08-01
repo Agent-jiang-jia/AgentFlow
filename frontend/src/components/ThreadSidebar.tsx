@@ -45,7 +45,7 @@ export function ThreadSidebar({
         </div>
         <div>
           <Typography.Title level={3}>AgentFlow</Typography.Title>
-          <Typography.Text>LOCAL WORKBENCH / 02</Typography.Text>
+          <Typography.Text>LOCAL WORKBENCH / V1</Typography.Text>
         </div>
       </header>
 

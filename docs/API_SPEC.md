@@ -174,7 +174,8 @@
 
 ### `GET /api/threads/{thread_id}/artifacts`
 
-返回当前线程中 `category=artifact` 的分页文件列表。
+返回当前线程中 `category=artifact` 的分页文件列表，结构与文件分页响应一致，并包含
+可选的 `description`；不返回 `stored_path` 或文件正文。
 
 ### `GET /api/threads/{thread_id}/artifacts/{file_id}/preview`
 
@@ -182,6 +183,7 @@
 - CSV：返回 UTF-8 CSV，由前端解析为表格。
 - HTML：返回 `text/html`，同时设置严格 CSP；前端仅放入带 `sandbox` 的 iframe。
 - 不支持预览的类型返回 `415 FILE_TYPE_UNSUPPORTED`。
+- 预览响应设置 `X-Content-Type-Options: nosniff` 和 `Cache-Control: no-store`。
 
 ### `GET /api/threads/{thread_id}/artifacts/{file_id}/download`
 

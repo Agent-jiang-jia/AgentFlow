@@ -1,6 +1,7 @@
 import { create } from "zustand";
 
 import { streamChat } from "../api/chat";
+import { fetchArtifacts } from "../api/artifacts";
 import {
   deleteFile as deleteFileRequest,
   fetchFiles,
@@ -31,6 +32,7 @@ interface WorkspaceState {
   streamingMessage: Message | null;
   toolActivities: ToolActivity[];
   files: FileMetadata[];
+  artifacts: FileMetadata[];
   loading: boolean;
   streaming: boolean;
   uploading: boolean;
@@ -93,6 +95,7 @@ export const useWorkspaceStore = create<WorkspaceState>((set, get) => ({
   streamingMessage: null,
   toolActivities: [],
   files: [],
+  artifacts: [],
   loading: true,
   streaming: false,
   uploading: false,
@@ -103,18 +106,20 @@ export const useWorkspaceStore = create<WorkspaceState>((set, get) => ({
     try {
       const threads = await reloadThreads();
       const currentThreadId = threads[0]?.id ?? null;
-      const [messages, files] =
+      const [messages, files, artifacts] =
         currentThreadId === null
-          ? [[], []]
+          ? [[], [], []]
           : await Promise.all([
               fetchMessages(currentThreadId).then((page) => page.items),
               fetchFiles(currentThreadId).then((page) => page.items),
+              fetchArtifacts(currentThreadId).then((page) => page.items),
             ]);
       set({
         threads,
         currentThreadId,
         messages,
         files,
+        artifacts,
         toolActivities: [],
         loading: false,
       });
@@ -136,6 +141,7 @@ export const useWorkspaceStore = create<WorkspaceState>((set, get) => ({
         currentThreadId: thread.id,
         messages: [],
         files: [],
+        artifacts: [],
         streamingMessage: null,
         toolActivities: [],
       });
@@ -152,18 +158,20 @@ export const useWorkspaceStore = create<WorkspaceState>((set, get) => ({
       currentThreadId: threadId,
       messages: [],
       files: [],
+      artifacts: [],
       streamingMessage: null,
       toolActivities: [],
       loading: true,
       error: null,
     });
     try {
-      const [messages, files] = await Promise.all([
+      const [messages, files, artifacts] = await Promise.all([
         fetchMessages(threadId).then((page) => page.items),
         fetchFiles(threadId).then((page) => page.items),
+        fetchArtifacts(threadId).then((page) => page.items),
       ]);
       if (get().currentThreadId === threadId) {
-        set({ messages, files, loading: false });
+        set({ messages, files, artifacts, loading: false });
       }
     } catch (error: unknown) {
       if (get().currentThreadId === threadId) {
@@ -184,18 +192,20 @@ export const useWorkspaceStore = create<WorkspaceState>((set, get) => ({
         get().currentThreadId === threadId
           ? (threads[0]?.id ?? null)
           : get().currentThreadId;
-      const [messages, files] =
+      const [messages, files, artifacts] =
         currentThreadId === null
-          ? [[], []]
+          ? [[], [], []]
           : await Promise.all([
               fetchMessages(currentThreadId).then((page) => page.items),
               fetchFiles(currentThreadId).then((page) => page.items),
+              fetchArtifacts(currentThreadId).then((page) => page.items),
             ]);
       set({
         threads,
         currentThreadId,
         messages,
         files,
+        artifacts,
         streamingMessage: null,
         toolActivities: [],
       });
@@ -272,6 +282,16 @@ export const useWorkspaceStore = create<WorkspaceState>((set, get) => ({
         set((state) => ({
           toolActivities: applyToolResult(state.toolActivities, event),
         }));
+      } else if (event.event === "artifact_created") {
+        void fetchArtifacts(threadId)
+          .then((page) => {
+            if (get().currentThreadId === threadId) {
+              set({ artifacts: page.items });
+            }
+          })
+          .catch(() => {
+            // The final authoritative reload reports a persistent failure.
+          });
       } else if (event.event === "error") {
         const message = event.data.message;
         set({ error: typeof message === "string" ? message : "对话执行失败" });
@@ -284,16 +304,18 @@ export const useWorkspaceStore = create<WorkspaceState>((set, get) => ({
       set({ error: errorMessage(error) });
     } finally {
       try {
-        const [threads, history, filePage] = await Promise.all([
+        const [threads, history, filePage, artifactPage] = await Promise.all([
           reloadThreads(),
           fetchMessages(threadId),
           fetchFiles(threadId),
+          fetchArtifacts(threadId),
         ]);
         if (get().currentThreadId === threadId) {
           set({
             threads,
             messages: history.items,
             files: filePage.items,
+            artifacts: artifactPage.items,
             streamingMessage: null,
             streaming: false,
           });
@@ -316,12 +338,13 @@ export const useWorkspaceStore = create<WorkspaceState>((set, get) => ({
     set({ uploading: true, error: null });
     try {
       await uploadFileRequest(threadId, file);
-      const [files, threads] = await Promise.all([
+      const [files, artifacts, threads] = await Promise.all([
         fetchFiles(threadId),
+        fetchArtifacts(threadId),
         reloadThreads(),
       ]);
       if (get().currentThreadId === threadId) {
-        set({ files: files.items, threads, uploading: false });
+        set({ files: files.items, artifacts: artifacts.items, threads, uploading: false });
       } else {
         set({ threads, uploading: false });
       }
@@ -344,12 +367,13 @@ export const useWorkspaceStore = create<WorkspaceState>((set, get) => ({
     set({ uploading: true, error: null });
     try {
       await deleteFileRequest(threadId, fileId);
-      const [files, threads] = await Promise.all([
+      const [files, artifacts, threads] = await Promise.all([
         fetchFiles(threadId),
+        fetchArtifacts(threadId),
         reloadThreads(),
       ]);
       if (get().currentThreadId === threadId) {
-        set({ files: files.items, threads, uploading: false });
+        set({ files: files.items, artifacts: artifacts.items, threads, uploading: false });
       } else {
         set({ threads, uploading: false });
       }

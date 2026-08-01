@@ -80,5 +80,6 @@ export interface FileMetadata {
   parse_status: string | null;
   parse_error: string | null;
   parsed_file_id: string | null;
+  description: string | null;
   created_at: string;
 }

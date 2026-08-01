@@ -33,9 +33,9 @@
 | P5-02 | 5 | 五类文件解析 | `app/parsers/*` | P5-01 | 统一文本、OCR 状态正确 | 解析测试 | DONE |
 | P5-03 | 5 | `list_files`/`read_file` | 工具/Service | P5-02 | 仅 file_id、跨线程拒绝 | pytest | DONE |
 | P5-04 | 5 | 前端上传和文件列表 | 前端组件/store | P5-01 | 展示真实解析状态 | 前端检查 | DONE |
-| P6-01 | 6 | `write_file` 安全生成 | 工具/Storage/Service | Phase 5 | 类型、路径、大小、重名正确 | pytest | TODO |
-| P6-02 | 6 | Artifact 列表、预览、下载 | API/Service | P6-01 | 安全预览下载 | pytest | TODO |
-| P6-03 | 6 | 完整三栏 Web 工作台 | 前端页面/组件 | P6-02 | 满足 PRD 工作台范围 | lint、build、人工验收 | TODO |
+| P6-01 | 6 | `write_file` 安全生成 | 工具/Storage/Service | Phase 5 | 类型、路径、大小、重名正确 | pytest | DONE |
+| P6-02 | 6 | Artifact 列表、预览、下载 | API/Service | P6-01 | 安全预览下载 | pytest | DONE |
+| P6-03 | 6 | 完整三栏 Web 工作台 | 前端页面/组件 | P6-02 | 满足 PRD 工作台范围 | lint、build、人工验收 | DONE |
 | P7-01 | 7 | 全链路异常、断连和恢复 | 后端核心模块 | Phase 6 | 失败状态一致且可恢复 | 集成测试 | TODO |
 | P7-02 | 7 | 安全测试收口 | 安全/文件/Web/HTML | P7-01 | PRD 安全项通过 | 安全测试 | TODO |
 | P7-03 | 7 | E2E、文档和发布验收 | 全项目 | P7-02 | V1 完成定义全部通过 | 全套自动/人工验证 | TODO |

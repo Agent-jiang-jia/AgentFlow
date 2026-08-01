@@ -1,9 +1,9 @@
 # AgentFlow
 
 AgentFlow V1 是面向单用户、本地部署的轻量级单 Agent Web 工作台。本仓库当前完成
-Phase 5：除联网搜索与安全网页读取外，现已支持 PDF、DOCX、TXT、Markdown、CSV
-上传与同步解析，以及线程隔离的 `list_files`、`read_file` Agent 工具。文件生成、
-Artifact 预览下载和完整三栏工作台仍属于 Phase 6。
+Phase 6：支持流式对话、顺序工具循环、联网搜索与网页读取、五类文件上传解析，
+以及线程隔离的 `list_files`、`read_file`、`write_file`。Agent 生成的 Artifact 可在
+完整三栏工作台中即时查看、受限预览、下载和删除。
 
 ## 环境要求
 
@@ -57,7 +57,7 @@ Set-Location backend
 
 ### 配置聊天模型与 Agent Loop
 
-Phase 5 使用一个固定的、支持流式 function/tool calling 的 OpenAI-compatible
+Phase 6 使用一个固定的、支持流式 function/tool calling 的 OpenAI-compatible
 `chat/completions` 端点。在 `backend\.env` 中配置：
 
 ```dotenv
@@ -89,8 +89,8 @@ AGENTFLOW_WEB_FETCH_MAX_BYTES=2000000
 搜索密钥只从环境变量读取。未配置搜索密钥时，普通对话和 `web_fetch` 仍可使用，
 `web_search` 会向模型返回安全的配置错误。网页读取仅允许公网 HTTP(S) URL，并在
 请求前及每次重定向后检查 DNS 解析结果；不会向 SSE 发送网页正文或受限地址。
-当前注册表包含 `get_current_time`、`web_search`、`web_fetch`、`list_files` 和
-`read_file`。
+当前注册表包含 `get_current_time`、`web_search`、`web_fetch`、`list_files`、
+`read_file` 和 `write_file`。
 
 ### 配置文件上传与解析
 
@@ -105,6 +105,19 @@ AGENTFLOW_MAX_PARSED_CHARS=200000
 同步生成统一 Markdown；扫描 PDF 会显示 `unsupported_ocr`，不会把空白解析结果交给
 模型。前端文件台支持逐个上传、查看真实解析状态和删除；Agent 读取只接受 `file_id`。
 
+### 配置 Artifact 生成与预览
+
+生成文件大小上限由环境变量集中配置：
+
+```dotenv
+AGENTFLOW_MAX_ARTIFACT_SIZE_MB=5
+```
+
+`write_file` 支持 `.md`、`.txt`、`.html`、`.csv`、`.json`、`.py`、`.js`、`.ts`、
+`.yaml` 和 `.yml`，只写入当前会话的 `outputs` 目录。同名文件自动编号，不覆盖已有
+成果。HTML 通过严格 CSP 和无权限 `sandbox` iframe 预览；所有下载均使用附件响应，
+API、SSE 和错误不会返回服务器文件路径。
+
 ## 前端安装与启动
 
 打开另一个 PowerShell，回到仓库根目录：
@@ -117,7 +130,8 @@ npm run dev
 ```
 
 访问 `http://127.0.0.1:5173`。页面从后端恢复历史会话，聊天请求使用原生 Fetch
-`ReadableStream` 消费 POST SSE。
+`ReadableStream` 消费 POST SSE。桌面端采用会话、聊天、交付台三栏布局；窄屏按相同
+信息顺序堆叠显示。
 
 ## 后端测试和静态检查
 

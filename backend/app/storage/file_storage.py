@@ -4,7 +4,7 @@ from pathlib import Path, PurePosixPath
 from typing import BinaryIO
 from uuid import UUID, uuid4
 
-from app.core.exceptions import FileParseError, FileTooLargeError
+from app.core.exceptions import ArtifactTooLargeError, FileParseError, FileTooLargeError
 
 _CHUNK_SIZE = 64 * 1024
 
@@ -89,6 +89,33 @@ class FileStorage:
             destination.unlink(missing_ok=True)
             raise
         return self._relative(destination), original_name, len(encoded)
+
+    def write_artifact(
+        self,
+        *,
+        thread_id: str,
+        file_id: str,
+        filename: str,
+        content: str,
+        max_bytes: int,
+    ) -> tuple[str, int]:
+        """Write one bounded UTF-8 Artifact to the current thread outputs directory."""
+        self._canonical_uuid(file_id, "File")
+        directory = self._thread_directory(thread_id, "outputs")
+        encoded = content.encode("utf-8")
+        if len(encoded) > max_bytes:
+            raise ArtifactTooLargeError
+        stored_name = f"{file_id}_{filename}"
+        destination = (directory / stored_name).resolve()
+        if not destination.is_relative_to(directory):
+            raise ValueError("Artifact path escaped the controlled directory")
+        try:
+            with destination.open("xb") as target:
+                target.write(encoded)
+        except Exception:
+            destination.unlink(missing_ok=True)
+            raise
+        return self._relative(destination), len(encoded)
 
     def resolve_owned(self, *, thread_id: str, stored_path: str) -> Path:
         """Resolve trusted metadata and prove it remains in the expected thread."""

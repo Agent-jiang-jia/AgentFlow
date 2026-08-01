@@ -489,3 +489,82 @@
 
 - Phase 6 计划实现安全 `write_file`、Artifact 列表/预览/下载和完整三栏工作台；
   本次未提前实现任何 Phase 6 业务能力。
+
+## 2026-08-01 — Phase 6 安全文件生成、Artifact 与完整工作台
+
+### 完成任务
+
+- 实现 `write_file`，只接受叶子文件名、UTF-8 正文和可选描述；支持 V1 规定的十种
+  扩展名，拒绝绝对路径、分隔符、`..`、Windows 保留名和未授权类型。
+- 生成内容只写入当前线程 `outputs`，按 UTF-8 字节执行配置化大小限制；真实文件名
+  使用服务端 `file_id` 前缀，可见同名文件自动生成 `(2)` 等后缀且不覆盖已有成果。
+- 新增 Artifact Service 与列表、预览、下载 API；所有访问同时校验 `thread_id`、
+  `file_id`、category 和受控路径，跨线程返回 `FILE_ACCESS_DENIED`，响应不含绝对路径。
+- 为 Markdown、TXT、JSON、CSV、Python、JavaScript、TypeScript、YAML 和 HTML 返回
+  正确预览类型；HTML 响应设置严格 CSP，下载使用安全 `Content-Disposition`，全部
+  响应设置 `nosniff` 和 `no-store`。
+- 将 `write_file` 注册到单 Agent 顺序工具循环；内容不会写入公开工具参数、SSE 或
+  工具结果，写入和元数据提交完成后按 `tool_start → artifact_created → tool_result`
+  顺序发送安全事件。
+- 前端建立独立 Artifact API 与运行时形状检查；会话切换、刷新、上传、删除和聊天
+  结束均恢复权威列表，收到 `artifact_created` 后立即刷新生成成果。
+- 完成会话、聊天、交付台三栏工作台；右栏分离上传资料和生成成果，支持预览、下载、
+  删除，Markdown/GFM、代码、JSON、CSV 表格、纯文本和 HTML 沙箱均有对应预览。
+- 使用 React lazy 边界拆分完整工作台与 Artifact 预览，production build 最大 chunk
+  从 Phase 5 的约 875 kB 降至约 417 kB，不提高 Vite 告警阈值。
+- 修复已有上传超限分支使用不存在的 Starlette 413 常量问题，并保留原错误码和行为。
+- 更新 README、任务与进度文档；未实现 Phase 7 的异常/恢复收口或其他后续能力。
+
+### 主要修改文件
+
+- `backend/app/services/artifact_service.py`、`storage/file_storage.py`、
+  `storage/filename.py`
+- `backend/app/tools/write_file.py`、`tools/__init__.py`
+- `backend/app/api/artifacts.py`、`api/dependencies.py`、`main.py`
+- `backend/app/services/chat_service.py`、文件 Schema/Repository/Service
+- `backend/tests/api/test_artifacts.py`
+- `frontend/src/pages/Workspace.tsx`
+- `frontend/src/components/ArtifactPanel.tsx`、`ArtifactPreview.tsx`、`FileShelf.tsx`
+- `frontend/src/api/artifacts.ts`、Zustand store、共享类型和 CSV 工具
+- `frontend/src/styles.css`、`App.tsx`
+- `README.md`、`docs/TASKS.md`、`docs/PROGRESS.md`
+
+### 执行命令
+
+- `python -m pytest`
+- `python -m ruff format --check .`、`python -m ruff check .`
+- `python -m mypy app tests`、`python -s -m pip check`
+- 使用独立空数据库执行 `alembic upgrade head`、`current` 和 `check`。
+- `npm run test`、`npm run lint`、`npm run typecheck`、`npm run build`
+- `npm audit --audit-level=high`
+- 使用隔离数据库和 production build 启动 Uvicorn/Vite，在 1280px 与 390px 视口
+  检查三栏/堆叠布局、Artifact 恢复、Markdown/CSV/HTML 预览、HTML 沙箱和控制台。
+- 使用 `rg` 检查占位实现、跳过测试、疑似密钥、绝对路径、固定线程 ID 和禁止能力；
+  执行 `git diff --check`。
+
+### 测试结果
+
+- pytest：81 个测试全部通过；Phase 6 新增覆盖完整 `write_file` Agent Loop、事件
+  顺序、正文不泄露、十种类型、非法文件名/类型、UTF-8 字节大小、同名处理、跨线程
+  拒绝、列表、预览/下载 Content-Type、安全头和工具参数持久化。
+- Ruff 格式检查和 lint 全部通过；mypy 对 90 个源文件严格检查通过；项目隔离环境
+  依赖完整。
+- Alembic：空数据库升级到 `20260731_0001 (head)`，`alembic check` 无模型漂移；
+  本阶段复用既有 `files` 表及 `description` 字段，没有数据库结构变化。
+- Vitest：6 个测试文件、14 个测试全部通过；ESLint、严格 TypeScript 和 production
+  build 全部通过；最大 chunk 约 417 kB（gzip 约 129 kB），无超限提示。
+- 浏览器实测：1280px 为 270/656/330 三栏，390px 无横向溢出；HTML iframe 的
+  `sandbox` 为空权限集且脚本未执行，CSV 表格正确，控制台无错误或警告。
+- 隔离浏览器数据与日志目录在验收后删除，不包含开发数据，删除后不可恢复。
+
+### 遗留问题
+
+- 未配置真实外部模型凭据，因此未做第三方模型在线 `write_file` 调用；已通过完整脚本
+  模型、ToolMessage、SSE、数据库和文件系统集成测试验证真实生成闭环。
+- pytest 仍显示本机用户级 `pytest-asyncio` 的默认 fixture loop scope 弃用提示；
+  项目隔离依赖与测试行为不受影响，本阶段未通过改动无关测试配置掩盖提示。
+
+### 下一阶段
+
+- Phase 7 将按计划收口全链路异常、断连、失败补偿、安全测试、E2E 和发布文档；
+  本次未提前实现任何 Phase 7 能力。

@@ -26,6 +26,7 @@ class FileResponse(BaseModel):
     parse_status: str | None
     parse_error: str | None
     parsed_file_id: str | None
+    description: str | None
     created_at: datetime
 
     @field_serializer("created_at")

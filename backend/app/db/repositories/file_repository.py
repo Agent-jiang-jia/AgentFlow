@@ -36,6 +36,15 @@ class FileRepository:
             )
         )
 
+    def artifact_name_exists(self, *, thread_id: str, original_name: str) -> bool:
+        """Return whether a generated file already uses this visible name."""
+        statement = select(File.id).where(
+            File.thread_id == thread_id,
+            File.category == "artifact",
+            File.original_name == original_name,
+        )
+        return self._session.scalar(statement) is not None
+
     def list_page(
         self,
         *,

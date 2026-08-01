@@ -1,4 +1,4 @@
-"""Phase 3 streaming chat and single-agent orchestration."""
+"""Streaming chat and bounded single-agent orchestration."""
 
 import asyncio
 import logging
@@ -181,6 +181,23 @@ class ChatService:
                     ).encode()
                 elif isinstance(event, AgentToolResult):
                     execution = event.execution
+                    if execution.success and execution.tool_name == "write_file":
+                        artifact_data = {
+                            key: execution.data[key]
+                            for key in (
+                                "file_id",
+                                "filename",
+                                "description",
+                                "preview_url",
+                                "download_url",
+                            )
+                            if key in execution.data
+                        }
+                        yield self._event(
+                            prepared,
+                            "artifact_created",
+                            artifact_data,
+                        ).encode()
                     yield self._event(
                         prepared,
                         "tool_result",

@@ -21,6 +21,7 @@ export function isFileMetadata(value: unknown): value is FileMetadata {
     isNullableString(value.parse_status) &&
     isNullableString(value.parse_error) &&
     isNullableString(value.parsed_file_id) &&
+    isNullableString(value.description) &&
     typeof value.created_at === "string"
   );
 }

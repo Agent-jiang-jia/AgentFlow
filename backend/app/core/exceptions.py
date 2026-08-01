@@ -130,7 +130,18 @@ class FileTooLargeError(AppError):
         super().__init__(
             code=ErrorCode.FILE_TOO_LARGE,
             message="文件超过大小限制",
-            status_code=status.HTTP_413_CONTENT_TOO_LARGE,
+            status_code=status.HTTP_413_REQUEST_ENTITY_TOO_LARGE,
+        )
+
+
+class ArtifactTooLargeError(AppError):
+    """Raised when generated content exceeds the configured Artifact limit."""
+
+    def __init__(self) -> None:
+        super().__init__(
+            code=ErrorCode.ARTIFACT_TOO_LARGE,
+            message="生成文件超过大小限制",
+            status_code=status.HTTP_413_REQUEST_ENTITY_TOO_LARGE,
         )
 
 

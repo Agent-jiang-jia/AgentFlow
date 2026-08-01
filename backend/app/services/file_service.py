@@ -154,7 +154,7 @@ class FileService:
             )
             self._persist_upload(upload_record, parsed_record)
             persisted = True
-            return self._response(upload_record, parsed_record.id if parsed_record else None)
+            return self.to_response(upload_record, parsed_record.id if parsed_record else None)
         except Exception:
             if not persisted:
                 if parsed_path is not None:
@@ -183,7 +183,7 @@ class FileService:
                 limit=page_size,
             )
             return FilePage(
-                items=[self._response(file, self._parsed_id(repository, file)) for file in files],
+                items=[self.to_response(file, self._parsed_id(repository, file)) for file in files],
                 page=page,
                 page_size=page_size,
                 total=repository.count(thread_id=thread_id, category=category),
@@ -196,7 +196,7 @@ class FileService:
                 raise ThreadNotFoundError
             repository = FileRepository(session)
             file = self._require_owned(repository, thread_id=thread_id, file_id=file_id)
-            return self._response(file, self._parsed_id(repository, file))
+            return self.to_response(file, self._parsed_id(repository, file))
 
     def delete(self, *, thread_id: str, file_id: str) -> None:
         """Delete metadata and owned paths with filesystem rollback compensation."""
@@ -375,7 +375,8 @@ class FileService:
         return parsed.id if parsed is not None else None
 
     @staticmethod
-    def _response(file: File, parsed_file_id: str | None) -> FileResponse:
+    def to_response(file: File, parsed_file_id: str | None) -> FileResponse:
+        """Project internal metadata to the path-free public file schema."""
         return FileResponse(
             id=file.id,
             thread_id=file.thread_id,
@@ -388,5 +389,6 @@ class FileService:
             parse_status=file.parse_status,
             parse_error=file.parse_error,
             parsed_file_id=parsed_file_id,
+            description=file.description,
             created_at=file.created_at,
         )
