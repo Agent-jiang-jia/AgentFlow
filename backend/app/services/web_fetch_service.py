@@ -1,14 +1,21 @@
 """Safe HTML retrieval, redirect handling, and main-content extraction."""
 
 import re
+from collections.abc import Callable
 from dataclasses import dataclass
+from typing import cast
 from urllib.parse import urljoin
 
 import httpx
 from bs4 import BeautifulSoup
 from readability import Document  # type: ignore[import-untyped]
 
-from app.core.security import HostResolver, UrlNotAllowedError, validate_public_http_url
+from app.core.security import (
+    HostResolver,
+    UrlNotAllowedError,
+    require_public_ip_address,
+    validate_public_http_url,
+)
 
 REDIRECT_STATUSES = {301, 302, 303, 307, 308}
 HTML_CONTENT_TYPES = {"text/html", "application/xhtml+xml"}
@@ -71,6 +78,7 @@ class WebFetchService:
                             "User-Agent": "AgentFlow/0.1",
                         },
                     ) as response:
+                        self._validate_connected_peer(response)
                         if response.status_code in REDIRECT_STATUSES:
                             location = response.headers.get("location")
                             if location is None or redirect_count >= self._max_redirects:
@@ -97,6 +105,25 @@ class WebFetchService:
         except (httpx.NetworkError, httpx.HTTPStatusError, LookupError) as exc:
             raise WebFetchServiceError("网页读取失败", retryable=True) from exc
         raise WebFetchServiceError("网页读取失败", retryable=True)
+
+    def _validate_connected_peer(self, response: httpx.Response) -> None:
+        """Recheck the actual socket peer to close DNS-rebinding races."""
+        stream = response.extensions.get("network_stream")
+        if stream is None:
+            if self._transport is None:
+                raise WebFetchServiceError("网页连接安全校验失败", retryable=True)
+            return
+        getter = getattr(stream, "get_extra_info", None)
+        if getter is None:
+            if self._transport is None:
+                raise WebFetchServiceError("网页连接安全校验失败", retryable=True)
+            return
+        peer = cast(Callable[[str], object], getter)("server_addr")
+        if not isinstance(peer, tuple) or not peer or not isinstance(peer[0], str):
+            if self._transport is None:
+                raise WebFetchServiceError("网页连接安全校验失败", retryable=True)
+            return
+        require_public_ip_address(peer[0])
 
     async def _validate(self, url: str) -> str:
         if self._resolver is None:

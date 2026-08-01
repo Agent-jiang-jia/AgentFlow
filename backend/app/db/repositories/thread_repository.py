@@ -37,6 +37,10 @@ class ThreadRepository:
         """Return the total number of threads."""
         return int(self._session.scalar(select(func.count()).select_from(Thread)) or 0)
 
+    def list_ids(self) -> set[str]:
+        """Return all logical thread identifiers for storage reconciliation."""
+        return set(self._session.scalars(select(Thread.id)))
+
     def has_active_run(self, thread_id: str) -> bool:
         """Return whether a pending or running execution exists."""
         statement = select(

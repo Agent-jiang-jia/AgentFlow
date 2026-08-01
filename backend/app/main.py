@@ -20,8 +20,11 @@ from app.core.exceptions import register_exception_handlers
 from app.core.logging import configure_logging
 from app.db.database import Database
 from app.services.model_client import OpenAICompatibleChatModel
+from app.services.recovery_service import RecoveryService
 from app.services.web_fetch_service import WebFetchService
 from app.services.web_search_service import WebSearchService
+from app.storage.file_storage import FileStorage
+from app.storage.thread_storage import ThreadStorage
 
 logger = logging.getLogger(__name__)
 
@@ -35,6 +38,29 @@ def create_app(settings: Settings | None = None) -> FastAPI:
     @asynccontextmanager
     async def lifespan(_app: FastAPI) -> AsyncIterator[None]:
         app_settings.ensure_directories()
+        try:
+            recovery_report = RecoveryService(
+                database=database,
+                thread_storage=ThreadStorage(app_settings.resolved_data_dir),
+                file_storage=FileStorage(app_settings.resolved_data_dir),
+            ).recover()
+            _app.state.recovery_report = recovery_report
+            logger.info(
+                "Startup recovery completed",
+                extra={
+                    "schema_ready": recovery_report.schema_ready,
+                    "cancelled_runs": recovery_report.cancelled_runs,
+                    "failed_tool_calls": recovery_report.failed_tool_calls,
+                    "restored_thread_trees": recovery_report.thread_storage.restored,
+                    "purged_thread_trees": recovery_report.thread_storage.purged,
+                    "created_thread_trees": recovery_report.thread_storage.created,
+                    "restored_files": recovery_report.file_storage.restored,
+                    "purged_files": recovery_report.file_storage.purged,
+                    "missing_files": recovery_report.file_storage.missing,
+                },
+            )
+        except Exception:
+            logger.exception("Startup recovery failed")
         logger.info("AgentFlow API started", extra={"environment": app_settings.environment})
         try:
             yield
@@ -49,6 +75,7 @@ def create_app(settings: Settings | None = None) -> FastAPI:
     )
     application.state.settings = app_settings
     application.state.database = database
+    application.state.recovery_report = None
     application.state.model_client = OpenAICompatibleChatModel(app_settings)
     application.state.web_search_service = WebSearchService(
         provider=app_settings.search_provider,
@@ -71,7 +98,7 @@ def create_app(settings: Settings | None = None) -> FastAPI:
 
     @application.middleware("http")
     async def add_request_id(request: Request, call_next: RequestResponseEndpoint) -> Response:
-        request_id = request.headers.get("X-Request-ID") or str(uuid4())
+        request_id = str(uuid4())
         request.state.request_id = request_id
         response = await call_next(request)
         response.headers["X-Request-ID"] = request_id

@@ -11,6 +11,8 @@ from fastapi.responses import JSONResponse
 from app.core.error_codes import ErrorCode
 
 logger = logging.getLogger(__name__)
+HTTP_413_CONTENT_TOO_LARGE = 413
+HTTP_422_UNPROCESSABLE_CONTENT = 422
 
 
 class AppError(Exception):
@@ -130,7 +132,7 @@ class FileTooLargeError(AppError):
         super().__init__(
             code=ErrorCode.FILE_TOO_LARGE,
             message="文件超过大小限制",
-            status_code=status.HTTP_413_REQUEST_ENTITY_TOO_LARGE,
+            status_code=HTTP_413_CONTENT_TOO_LARGE,
         )
 
 
@@ -141,7 +143,7 @@ class ArtifactTooLargeError(AppError):
         super().__init__(
             code=ErrorCode.ARTIFACT_TOO_LARGE,
             message="生成文件超过大小限制",
-            status_code=status.HTTP_413_REQUEST_ENTITY_TOO_LARGE,
+            status_code=HTTP_413_CONTENT_TOO_LARGE,
         )
 
 
@@ -214,7 +216,7 @@ async def validation_error_handler(request: Request, exc: RequestValidationError
     ]
     return _error_response(
         request=request,
-        status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
+        status_code=HTTP_422_UNPROCESSABLE_CONTENT,
         code=ErrorCode.REQUEST_VALIDATION_ERROR,
         message="请求参数校验失败",
         retryable=False,

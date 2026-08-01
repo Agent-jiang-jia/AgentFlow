@@ -71,6 +71,10 @@ class FileRepository:
         )
         return list(self._session.scalars(statement))
 
+    def list_stored_paths(self) -> set[str]:
+        """Return every managed relative path for storage reconciliation."""
+        return set(self._session.scalars(select(File.stored_path)))
+
     def count(self, *, thread_id: str, category: str) -> int:
         """Count one thread's files with an optional category filter."""
         statement = select(func.count()).select_from(File).where(File.thread_id == thread_id)

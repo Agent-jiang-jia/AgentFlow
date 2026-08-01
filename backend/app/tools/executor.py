@@ -170,6 +170,7 @@ class ToolExecutor:
             raise RuntimeError("Prepared tool invocation lost validated state")
 
         started = perf_counter()
+        cancellation: asyncio.CancelledError | None = None
         try:
             async with asyncio.timeout(self._timeout_seconds):
                 output = await invocation.tool.execute(
@@ -177,6 +178,18 @@ class ToolExecutor:
                     invocation.validated_arguments,
                 )
             self._ensure_json_serializable(output)
+        except asyncio.CancelledError as exc:
+            cancellation = exc
+            execution = self._error_result(
+                ToolError(
+                    code=ErrorCode.TOOL_EXECUTION_FAILED,
+                    message="工具执行已取消",
+                    retryable=True,
+                ),
+                status="failed",
+                tool_call_id=invocation.tool_call_id,
+                tool_name=invocation.tool_name,
+            )
         except TimeoutError:
             execution = self._error_result(
                 ToolError(
@@ -227,6 +240,8 @@ class ToolExecutor:
 
         duration_ms = max(0, round((perf_counter() - started) * 1000))
         self._finish(invocation, execution, duration_ms)
+        if cancellation is not None:
+            raise cancellation
         return execution
 
     def reject(

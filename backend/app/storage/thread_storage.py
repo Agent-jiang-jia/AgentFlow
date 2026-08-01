@@ -1,8 +1,24 @@
 """Controlled per-thread directory management."""
 
+import re
 import shutil
+from dataclasses import dataclass
 from pathlib import Path
 from uuid import UUID, uuid4
+
+_STAGED_THREAD = re.compile(
+    r"^\.deleting-(?P<thread_id>[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-"
+    r"[0-9a-f]{4}-[0-9a-f]{12})-[0-9a-f]{32}$"
+)
+
+
+@dataclass(frozen=True, slots=True)
+class ThreadRecoveryResult:
+    """Counts produced while reconciling database threads and local trees."""
+
+    restored: int = 0
+    purged: int = 0
+    created: int = 0
 
 
 class ThreadStorage:
@@ -55,3 +71,49 @@ class ThreadStorage:
         """Permanently remove a tree after database deletion commits."""
         if staged is not None and staged.exists():
             shutil.rmtree(staged)
+
+    def recover(self, existing_thread_ids: set[str]) -> ThreadRecoveryResult:
+        """Resolve interrupted directory deletes and recreate fixed thread folders."""
+        self._threads_root.mkdir(parents=True, exist_ok=True)
+        restored = 0
+        purged = 0
+        created = 0
+
+        staged_by_thread: dict[str, list[Path]] = {}
+        for candidate in sorted(self._threads_root.iterdir(), key=lambda path: path.name):
+            match = _STAGED_THREAD.fullmatch(candidate.name)
+            if match is None or candidate.is_symlink() or not candidate.is_dir():
+                continue
+            thread_id = match.group("thread_id")
+            staged_by_thread.setdefault(thread_id, []).append(candidate)
+
+        for thread_id, staged_directories in staged_by_thread.items():
+            root = self._thread_root(thread_id)
+            if thread_id in existing_thread_ids and not root.exists():
+                staged_directories.pop(0).rename(root)
+                restored += 1
+            for staged in staged_directories:
+                shutil.rmtree(staged)
+                purged += 1
+
+        for thread_id in existing_thread_ids:
+            root = self._thread_root(thread_id)
+            if not root.exists():
+                root.mkdir(parents=True)
+                created += 1
+            for directory in self._SUBDIRECTORIES:
+                (root / directory).mkdir(exist_ok=True)
+
+        for candidate in tuple(self._threads_root.iterdir()):
+            if candidate.is_symlink() or not candidate.is_dir():
+                continue
+            try:
+                parsed_id = UUID(candidate.name)
+            except ValueError:
+                continue
+            if str(parsed_id) != candidate.name or candidate.name in existing_thread_ids:
+                continue
+            shutil.rmtree(candidate)
+            purged += 1
+
+        return ThreadRecoveryResult(restored=restored, purged=purged, created=created)

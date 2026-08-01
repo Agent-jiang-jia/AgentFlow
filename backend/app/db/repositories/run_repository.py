@@ -20,3 +20,8 @@ class RunRepository:
         """Return a run only when it belongs to the expected thread."""
         statement = select(Run).where(Run.id == run_id, Run.thread_id == thread_id)
         return self._session.scalar(statement)
+
+    def list_active(self) -> list[Run]:
+        """Return runs left non-terminal by an interrupted process."""
+        statement = select(Run).where(Run.status.in_(("pending", "running")))
+        return list(self._session.scalars(statement))

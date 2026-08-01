@@ -30,3 +30,8 @@ class ToolCallRepository:
             ToolCall.thread_id == thread_id,
         )
         return self._session.scalar(statement)
+
+    def list_active(self) -> list[ToolCall]:
+        """Return tool calls left non-terminal by an interrupted process."""
+        statement = select(ToolCall).where(ToolCall.status.in_(("pending", "running")))
+        return list(self._session.scalars(statement))

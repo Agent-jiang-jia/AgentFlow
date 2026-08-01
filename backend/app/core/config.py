@@ -3,6 +3,7 @@
 from functools import lru_cache
 from pathlib import Path
 from typing import Literal
+from urllib.parse import urlsplit
 
 from pydantic import Field, SecretStr, field_validator
 from pydantic_settings import BaseSettings, SettingsConfigDict
@@ -59,6 +60,23 @@ class Settings(BaseSettings):
             raise ValueError("At least one CORS origin must be configured")
         if "*" in normalized:
             raise ValueError("Wildcard CORS origins are not allowed")
+        for origin in normalized:
+            parsed = urlsplit(origin)
+            try:
+                port = parsed.port
+            except ValueError as exc:
+                raise ValueError("CORS origins must use valid ports") from exc
+            if (
+                parsed.scheme not in {"http", "https"}
+                or parsed.hostname is None
+                or parsed.username is not None
+                or parsed.password is not None
+                or parsed.path
+                or parsed.query
+                or parsed.fragment
+                or (port is not None and not 1 <= port <= 65535)
+            ):
+                raise ValueError("CORS origins must be HTTP(S) origins without paths")
         return normalized
 
     def resolve_path(self, value: Path) -> Path:

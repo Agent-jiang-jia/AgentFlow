@@ -2,6 +2,7 @@
 
 from pathlib import Path
 from typing import cast
+from uuid import UUID
 
 import pytest
 from app.core.config import Settings
@@ -19,7 +20,7 @@ async def test_health_returns_database_status(test_settings: Settings) -> None:
         app.router.lifespan_context(app),
         AsyncClient(transport=transport, base_url="http://test") as client,
     ):
-        response = await client.get("/health")
+        response = await client.get("/health", headers={"X-Request-ID": "client-spoofed"})
 
     assert response.status_code == 200
     assert response.json() == {
@@ -28,7 +29,9 @@ async def test_health_returns_database_status(test_settings: Settings) -> None:
         "version": "0.1.0",
         "database": "ok",
     }
-    assert response.headers["X-Request-ID"]
+    request_id = response.headers["X-Request-ID"]
+    assert request_id != "client-spoofed"
+    assert str(UUID(request_id)) == request_id
 
 
 @pytest.mark.anyio

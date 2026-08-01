@@ -2,7 +2,9 @@
 
 from pathlib import Path
 
+import pytest
 from app.core.config import BACKEND_ROOT, Settings
+from pydantic import ValidationError
 
 
 def test_example_environment_contains_prd_configuration() -> None:
@@ -47,6 +49,23 @@ def test_cors_origins_are_trimmed_and_normalized() -> None:
         "http://localhost:5173",
         "http://127.0.0.1:5173",
     ]
+
+
+@pytest.mark.parametrize(
+    "origin",
+    [
+        "*",
+        "file:///local",
+        "https://user:password@example.com",
+        "https://example.com/path",
+        "https://example.com?query=value",
+        "https://example.com:99999",
+    ],
+)
+def test_cors_rejects_non_origin_and_credential_values(origin: str) -> None:
+    """CORS configuration cannot grant opaque, credentialed, or path-scoped values."""
+    with pytest.raises(ValidationError):
+        Settings(_env_file=None, cors_origins=[origin])
 
 
 def test_relative_paths_are_resolved_from_backend_root() -> None:

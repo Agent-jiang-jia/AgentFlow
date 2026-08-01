@@ -568,3 +568,73 @@
 
 - Phase 7 将按计划收口全链路异常、断连、失败补偿、安全测试、E2E 和发布文档；
   本次未提前实现任何 Phase 7 能力。
+
+## 2026-08-01 — Phase 7 安全、恢复与 V1 发布验收
+
+### 完成任务
+
+- 新增启动恢复服务：幂等终结上次进程遗留的活动 run 和工具调用，释放会话唯一运行
+  锁；缺少迁移 schema 时不隐式建表，数据库不可用时仍允许健康接口报告真实故障。
+- 将线程/文件删除暂存名改为可恢复格式；启动时按 SQLite 权威元数据恢复未提交删除，
+  清理已提交删除、孤立线程目录和无元数据的服务端受控文件，并报告缺失文件计数。
+- 工具执行收到取消时先持久化安全失败状态再传播取消，避免 SSE 断连后工具永久停留
+  在 `running`；前端协议失败后重新加载消息、文件和 Artifact 权威状态。
+- 在 URL 解析、DNS 结果和每次重定向校验基础上，增加实际 socket peer 复检，关闭
+  DNS 重绑定在预校验与连接之间的竞态。
+- 收紧 CORS origin 语法，拒绝非 HTTP(S)、凭据、路径、查询和非法端口；请求 ID
+  仅由服务端生成，客户端不能伪造日志关联 ID。
+- 增加完整 V1 集成工作流，真实覆盖普通对话、文件上传、`list_files → read_file →
+  write_file`、Artifact 预览/下载、跨会话拒绝和新 app 实例重启恢复。
+- 完成发布 README、备份/恢复、运维排错和 `docs/ACCEPTANCE.md` 验收矩阵；同步更新
+  架构、API、SSE、实施计划、任务和进度文档。
+
+### 主要修改文件
+
+- `backend/app/services/recovery_service.py`
+- `backend/app/storage/thread_storage.py`、`file_storage.py`
+- `backend/app/tools/executor.py`
+- `backend/app/core/security.py`、`config.py`、`exceptions.py`
+- `backend/app/services/web_fetch_service.py`、`main.py`
+- `backend/tests/integration/test_v1_workflow.py`
+- `backend/tests/services/test_recovery_service.py`、`test_web_fetch_service.py`
+- `backend/tests/tools/test_executor.py`
+- `frontend/src/stores/workspaceStore.test.ts`
+- `README.md`、`docs/ACCEPTANCE.md` 及 Phase 7 设计/跟踪文档
+
+### 执行命令
+
+- `python -s -m pytest`
+- `python -m ruff format --check .`、`python -m ruff check .`
+- `python -m mypy app tests`、`python -s -m pip check`
+- 默认数据库执行 `alembic current`、`alembic check`。
+- 独立空数据库执行 `alembic upgrade head`、`current`，检查七张表和活动 run 唯一索引。
+- `npm run test`、`npm run lint`、`npm run typecheck`、`npm run build`
+- `npm audit --audit-level=high`、`npm ls --depth=0`
+- 使用隔离空数据库真实启动 Uvicorn，并请求 `GET /health`。
+- 使用 `rg` 检查 TODO/空实现/跳过测试、疑似密钥、绝对路径、固定 thread ID 和禁止
+  能力；执行 `git diff --check`。
+
+### 测试结果
+
+- pytest：91 个测试全部通过且无警告；新增覆盖进程恢复、线程/文件双向补偿、孤立对象
+  清理、工具取消终结、DNS 重绑定对端复检和完整 V1 重启工作流。
+- Ruff 格式与 lint 全部通过；mypy 对 94 个源文件严格检查通过；隔离环境依赖完整。
+- Alembic：默认库为 `20260731_0001 (head)` 且无模型漂移；独立空数据库成功创建七张
+  表和 `uq_runs_active_thread`。本阶段无数据库结构变化，因此未创建新 revision。
+- Vitest：7 个测试文件、15 个测试全部通过；ESLint、严格 TypeScript 和 production
+  build 全部通过；最大 chunk 约 417 kB，无体积告警；npm audit 为 0 个漏洞。
+- 真实 Uvicorn 使用隔离空数据库启动，`GET /health` 返回 200、`database=ok`；验收后
+  隔离数据库和日志目录已删除，不污染开发数据。
+- 扫描未发现新增 TODO、`pass`、`NotImplementedError`、skip/xfail、真实密钥、硬编码
+  用户绝对路径、固定生产 thread ID 或禁止能力；`git diff --check` 通过。
+
+### 外部服务说明
+
+- 验收环境未配置真实模型和 Tavily 密钥，因此没有伪报第三方在线可用性。模型与搜索
+  请求、流式 tool calling、错误映射和来源持久化均通过真实 `httpx` 路径的受控
+  transport 测试；部署环境配置凭据后按 `docs/ACCEPTANCE.md` 执行三项在线冒烟。
+
+### V1 状态
+
+- Phase 1 至 Phase 7 均已完成并验证，AgentFlow V1 达到 PRD 完成定义。
+- 未提前实现 V1.1/V1.2/V2 功能。

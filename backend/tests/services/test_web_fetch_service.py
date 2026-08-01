@@ -13,6 +13,14 @@ async def public_resolver(_host: str, _port: int) -> Sequence[str]:
     return ("93.184.216.34",)
 
 
+class PrivatePeerStream:
+    """Expose a private connected peer through httpcore's response extension."""
+
+    @staticmethod
+    def get_extra_info(name: str) -> object:
+        return ("127.0.0.1", 443) if name == "server_addr" else None
+
+
 @pytest.mark.anyio
 async def test_fetch_extracts_main_text_and_truncates() -> None:
     """Scripts and navigation are removed while main content is bounded."""
@@ -64,6 +72,27 @@ async def test_redirect_target_is_revalidated_before_second_request() -> None:
     with pytest.raises(UrlNotAllowedError):
         await service.fetch(url="https://public.example/start", max_chars=1000)
     assert requests == ["https://public.example/start"]
+
+
+@pytest.mark.anyio
+async def test_connected_peer_is_revalidated_after_dns_resolution() -> None:
+    """A DNS-rebinding connection to a private peer is rejected before reading bytes."""
+    service = WebFetchService(
+        timeout_seconds=2,
+        max_bytes=10_000,
+        resolver=public_resolver,
+        transport=httpx.MockTransport(
+            lambda _request: httpx.Response(
+                200,
+                headers={"content-type": "text/html"},
+                content=b"<p>must not be read</p>",
+                extensions={"network_stream": PrivatePeerStream()},
+            )
+        ),
+    )
+
+    with pytest.raises(UrlNotAllowedError, match="受限地址"):
+        await service.fetch(url="https://public.example/rebound", max_chars=1000)
 
 
 @pytest.mark.anyio

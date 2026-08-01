@@ -55,6 +55,15 @@ async def validate_public_http_url(
     return _rebuild_url(parsed, normalized_host, port)
 
 
+def require_public_ip_address(value: str) -> None:
+    """Reject a connected peer address unless it is a globally routable IP."""
+    try:
+        address = ipaddress.ip_address(value.split("%", 1)[0])
+    except ValueError as exc:
+        raise UrlNotAllowedError("网页连接地址无效") from exc
+    _require_public_address(address)
+
+
 def normalize_search_result_url(value: str) -> str | None:
     """Normalize a search-result URL while rejecting unsafe literal hosts."""
     try:
