@@ -36,6 +36,7 @@ class Settings(BaseSettings):
     model_api_base: str = ""
     model_api_key: SecretStr | None = None
     model_name: str = ""
+    model_timeout_seconds: float = Field(default=60.0, gt=0)
     search_api_key: SecretStr | None = None
 
     max_upload_size_mb: int = Field(default=20, ge=1)
@@ -70,7 +71,7 @@ class Settings(BaseSettings):
         return self.resolve_path(self.database_path)
 
     def ensure_directories(self) -> None:
-        """Create Phase 1 runtime directories if they do not exist."""
+        """Create runtime data directories if they do not exist."""
         self.resolved_data_dir.mkdir(parents=True, exist_ok=True)
         self.resolved_database_path.parent.mkdir(parents=True, exist_ok=True)
 

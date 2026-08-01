@@ -1,13 +1,11 @@
+import { API_BASE_URL } from "./client";
+
 export interface HealthResponse {
   status: "healthy";
   service: string;
   version: string;
   database: "ok";
 }
-
-const API_BASE_URL = (
-  import.meta.env.VITE_API_BASE_URL?.trim() || "http://127.0.0.1:8000"
-).replace(/\/+$/, "");
 
 function isHealthResponse(value: unknown): value is HealthResponse {
   if (typeof value !== "object" || value === null) {

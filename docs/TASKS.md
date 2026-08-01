@@ -17,10 +17,10 @@
 | P1-08 | 1 | README、环境示例和 Git 忽略 | `README.md`, `.gitignore`, `.env.example` | P1-01, P1-06 | PowerShell 命令可执行 | 按文档执行 | DONE |
 | P1-09 | 1 | Phase 1 全套验证与进度记录 | `docs/PROGRESS.md`, `TASKS.md` | P1-01..08 | 所有要求命令有真实结果 | 全套命令 | DONE |
 | P1-10 | 1 | Phase 1 严格审查与基础设施修复 | 后端生命周期/配置/测试、前端环境类型 | P1-01..09 | 无范围扩张，生命周期、配置、迁移和启动均实测通过 | 全套门禁与真实服务探测 | DONE |
-| P2-01 | 2 | 会话 CRUD 与线程目录 | 后端 API/Service/Repository | Phase 1 | CRUD、排序、级联清理正确 | pytest | TODO |
-| P2-02 | 2 | 消息持久化与 20 轮上下文 | 消息 Repository/Service | P2-01 | 顺序和线程隔离正确 | pytest | TODO |
-| P2-03 | 2 | 普通模型流式对话和标题 | chat API/Service、SSE | P2-02 | 不调用工具即可流式对话 | pytest、集成测试 | TODO |
-| P2-04 | 2 | 基础聊天前端 | 前端 API/store/components | P2-03 | 可创建、切换并恢复对话 | lint、typecheck、build | TODO |
+| P2-01 | 2 | 会话 CRUD 与线程目录 | 后端 API/Service/Repository | Phase 1 | CRUD、排序、级联清理正确 | pytest | DONE |
+| P2-02 | 2 | 消息持久化与 20 轮上下文 | 消息 Repository/Service | P2-01 | 顺序和线程隔离正确 | pytest | DONE |
+| P2-03 | 2 | 普通模型流式对话和标题 | chat API/Service、SSE | P2-02 | 不调用工具即可流式对话 | pytest、集成测试 | DONE |
+| P2-04 | 2 | 基础聊天前端 | 前端 API/store/components | P2-03 | 可创建、切换并恢复对话 | lint、typecheck、build | DONE |
 | P3-01 | 3 | Tool Registry 与测试工具 | `app/tools/*` | Phase 2 | 注册、校验、调用闭环 | pytest | TODO |
 | P3-02 | 3 | LangGraph 单 Agent 循环 | `app/agent/*` | P3-01 | 工具结果返回模型 | pytest | TODO |
 | P3-03 | 3 | 循环/重复/超时保护和工具记录 | Agent/Service/Repository | P3-02 | 保护和持久化正确 | pytest | TODO |

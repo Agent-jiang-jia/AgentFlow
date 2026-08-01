@@ -45,6 +45,40 @@ class DatabaseUnavailableError(AppError):
         )
 
 
+class ThreadNotFoundError(AppError):
+    """Raised when a requested thread does not exist."""
+
+    def __init__(self) -> None:
+        super().__init__(
+            code=ErrorCode.THREAD_NOT_FOUND,
+            message="会话不存在",
+            status_code=status.HTTP_404_NOT_FOUND,
+        )
+
+
+class ThreadBusyError(AppError):
+    """Raised when an operation conflicts with an active thread run."""
+
+    def __init__(self) -> None:
+        super().__init__(
+            code=ErrorCode.THREAD_BUSY,
+            message="会话正在执行任务",
+            status_code=status.HTTP_409_CONFLICT,
+            retryable=True,
+        )
+
+
+class MessageEmptyError(AppError):
+    """Raised when a chat request contains no visible text."""
+
+    def __init__(self) -> None:
+        super().__init__(
+            code=ErrorCode.MESSAGE_EMPTY,
+            message="消息不能为空",
+            status_code=status.HTTP_400_BAD_REQUEST,
+        )
+
+
 def _request_id(request: Request) -> str:
     return str(getattr(request.state, "request_id", "unknown"))
 

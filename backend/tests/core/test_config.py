@@ -13,6 +13,7 @@ def test_example_environment_contains_prd_configuration() -> None:
         "AGENTFLOW_MODEL_API_BASE",
         "AGENTFLOW_MODEL_API_KEY",
         "AGENTFLOW_MODEL_NAME",
+        "AGENTFLOW_MODEL_TIMEOUT_SECONDS",
         "AGENTFLOW_SEARCH_API_KEY",
         "AGENTFLOW_DATABASE_PATH",
         "AGENTFLOW_DATA_DIR",

@@ -1,113 +1,96 @@
-import {
-  ApiOutlined,
-  CheckCircleOutlined,
-  ReloadOutlined,
-} from "@ant-design/icons";
-import { Alert, Button, Card, Flex, Space, Spin, Tag, Typography } from "antd";
-import { useEffect, useState } from "react";
+import { Alert, Tag, Typography } from "antd";
+import { useEffect } from "react";
 
-import { fetchHealth, type HealthResponse } from "./api/health";
-
-type ConnectionState =
-  | { kind: "checking" }
-  | { kind: "healthy"; health: HealthResponse }
-  | { kind: "error"; message: string };
-
-function toErrorMessage(error: unknown): string {
-  return error instanceof Error ? error.message : "无法连接到后端服务";
-}
+import { ChatComposer } from "./components/ChatComposer";
+import { MessageTimeline } from "./components/MessageTimeline";
+import { ThreadSidebar } from "./components/ThreadSidebar";
+import { useWorkspaceStore } from "./stores/workspaceStore";
 
 export default function App() {
-  const [connection, setConnection] = useState<ConnectionState>({
-    kind: "checking",
-  });
+  const threads = useWorkspaceStore((state) => state.threads);
+  const currentThreadId = useWorkspaceStore(
+    (state) => state.currentThreadId,
+  );
+  const messages = useWorkspaceStore((state) => state.messages);
+  const streamingMessage = useWorkspaceStore(
+    (state) => state.streamingMessage,
+  );
+  const loading = useWorkspaceStore((state) => state.loading);
+  const streaming = useWorkspaceStore((state) => state.streaming);
+  const error = useWorkspaceStore((state) => state.error);
+  const initialize = useWorkspaceStore((state) => state.initialize);
+  const createThread = useWorkspaceStore((state) => state.createThread);
+  const selectThread = useWorkspaceStore((state) => state.selectThread);
+  const deleteThread = useWorkspaceStore((state) => state.deleteThread);
+  const sendMessage = useWorkspaceStore((state) => state.sendMessage);
+  const clearError = useWorkspaceStore((state) => state.clearError);
 
   useEffect(() => {
-    const controller = new AbortController();
-    void fetchHealth(controller.signal).then(
-      (health) => setConnection({ kind: "healthy", health }),
-      (error: unknown) => {
-        if (error instanceof DOMException && error.name === "AbortError") {
-          return;
-        }
-        setConnection({ kind: "error", message: toErrorMessage(error) });
-      },
-    );
-    return () => controller.abort();
-  }, []);
+    void initialize();
+  }, [initialize]);
 
-  const retryConnection = async () => {
-    setConnection({ kind: "checking" });
-    try {
-      const health = await fetchHealth();
-      setConnection({ kind: "healthy", health });
-    } catch (error: unknown) {
-      setConnection({ kind: "error", message: toErrorMessage(error) });
-    }
-  };
+  const currentThread = threads.find(
+    (thread) => thread.id === currentThreadId,
+  );
 
   return (
-    <main className="app-shell">
-      <Card className="status-card" bordered={false}>
-        <Flex vertical gap={24}>
-          <Space direction="vertical" size={4}>
-            <Typography.Text className="eyebrow">
-              MINI DEERFLOW V1
+    <main className="workspace-shell">
+      <ThreadSidebar
+        threads={threads}
+        currentThreadId={currentThreadId}
+        disabled={streaming}
+        onCreate={() => void createThread()}
+        onSelect={(threadId) => void selectThread(threadId)}
+        onDelete={(threadId) => void deleteThread(threadId)}
+      />
+
+      <section className="chat-workspace">
+        <header className="chat-header">
+          <div>
+            <Typography.Text className="section-label">
+              CONVERSATION / LIVE
             </Typography.Text>
-            <Typography.Title level={1}>AgentFlow</Typography.Title>
-            <Typography.Paragraph type="secondary">
-              轻量级单 Agent 工作台 · Phase 1 基础设施
-            </Typography.Paragraph>
-          </Space>
+            <Typography.Title level={2}>
+              {currentThread?.title ?? "选择一个会话"}
+            </Typography.Title>
+          </div>
+          <Tag
+            variant="filled"
+            className={`run-status${streaming ? " active" : ""}`}
+          >
+            <span />
+            {streaming ? "模型运行中" : "就绪"}
+          </Tag>
+        </header>
 
-          {connection.kind === "checking" && (
-            <Flex align="center" gap={12} className="connection-panel">
-              <Spin size="small" />
-              <Typography.Text>正在检查后端连接…</Typography.Text>
-            </Flex>
-          )}
+        {error !== null && (
+          <Alert
+            className="workspace-alert"
+            type="error"
+            showIcon
+            closable
+            title={error}
+            onClose={clearError}
+          />
+        )}
 
-          {connection.kind === "healthy" && (
-            <Flex vertical gap={12} className="connection-panel healthy">
-              <Space>
-                <CheckCircleOutlined className="success-icon" />
-                <Typography.Text strong>后端连接正常</Typography.Text>
-                <Tag color="success">SQLite {connection.health.database}</Tag>
-              </Space>
-              <Typography.Text type="secondary">
-                {connection.health.service} · v{connection.health.version}
-              </Typography.Text>
-            </Flex>
-          )}
+        <div className="conversation-scroll">
+          <MessageTimeline
+            messages={messages}
+            streamingMessage={streamingMessage}
+            loading={loading}
+            streaming={streaming}
+            hasThread={currentThreadId !== null}
+            onCreateThread={() => void createThread()}
+          />
+        </div>
 
-          {connection.kind === "error" && (
-            <Alert
-              type="error"
-              showIcon
-              message="后端连接异常"
-              description={connection.message}
-              action={
-                <Button
-                  icon={<ReloadOutlined />}
-                  onClick={() => void retryConnection()}
-                >
-                  重新检查
-                </Button>
-              }
-            />
-          )}
-
-          <Flex justify="space-between" align="center" wrap>
-            <Space>
-              <ApiOutlined />
-              <Typography.Text type="secondary">
-                当前仅提供健康检查；对话工作台将在后续 Phase 实现。
-              </Typography.Text>
-            </Space>
-            <Tag bordered={false}>Phase 1</Tag>
-          </Flex>
-        </Flex>
-      </Card>
+        <ChatComposer
+          disabled={currentThreadId === null || streaming || loading}
+          streaming={streaming}
+          onSend={sendMessage}
+        />
+      </section>
     </main>
   );
 }

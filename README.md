@@ -1,8 +1,9 @@
 # AgentFlow
 
-AgentFlow V1 是面向单用户、本地部署的轻量级单 Agent Web 工作台。本仓库当前只
-完成 Phase 1：工程脚手架、集中配置、SQLite/Alembic、健康检查和前端连接状态页。
-尚未实现会话、聊天、Agent、Web 搜索或文件业务接口。
+AgentFlow V1 是面向单用户、本地部署的轻量级单 Agent Web 工作台。本仓库当前完成
+Phase 2：在 Phase 1 基础设施之上提供会话 CRUD、消息与 run 持久化、固定单模型
+普通流式对话，以及可创建、切换和恢复会话的基础 Web 工作台。工具调用、Web 搜索
+和文件能力仍属于后续 Phase。
 
 ## 环境要求
 
@@ -54,6 +55,22 @@ Set-Location backend
 
 健康检查地址为 `http://127.0.0.1:8000/health`。
 
+### 配置聊天模型
+
+Phase 2 使用一个固定的 OpenAI-compatible `chat/completions` 流式端点。在
+`backend\.env` 中配置：
+
+```dotenv
+AGENTFLOW_MODEL_API_BASE=https://provider.example/v1
+AGENTFLOW_MODEL_API_KEY=replace-with-local-secret
+AGENTFLOW_MODEL_NAME=replace-with-fixed-model-name
+AGENTFLOW_MODEL_TIMEOUT_SECONDS=60
+```
+
+`MODEL_API_BASE` 也可直接填写以 `/chat/completions` 结尾的地址。密钥只从环境变量
+读取，不要提交 `backend\.env`。未配置模型时，会话 CRUD 仍可使用；发送消息会保留
+用户消息、将 run 标记为失败，并通过 SSE 返回安全的模型不可用提示。
+
 ## 前端安装与启动
 
 打开另一个 PowerShell，回到仓库根目录：
@@ -65,7 +82,8 @@ npm install
 npm run dev
 ```
 
-访问 `http://127.0.0.1:5173`。页面会请求真实的后端健康接口并显示连接状态。
+访问 `http://127.0.0.1:5173`。页面从后端恢复历史会话，聊天请求使用原生 Fetch
+`ReadableStream` 消费 POST SSE。
 
 ## 后端测试和静态检查
 
@@ -84,6 +102,7 @@ Set-Location ..
 Set-Location frontend
 npm run lint
 npm run typecheck
+npm run test
 npm run build
 Set-Location ..
 ```
