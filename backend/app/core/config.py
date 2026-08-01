@@ -43,6 +43,7 @@ class Settings(BaseSettings):
     search_timeout_seconds: float = Field(default=10.0, gt=0)
 
     max_upload_size_mb: int = Field(default=20, ge=1)
+    max_parsed_chars: int = Field(default=200_000, ge=1_000, le=2_000_000)
     max_artifact_size_mb: int = Field(default=5, ge=1)
     max_agent_loops: int = Field(default=10, ge=1)
     tool_timeout_seconds: float = Field(default=30.0, gt=0)

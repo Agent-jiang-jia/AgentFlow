@@ -1,9 +1,9 @@
 # AgentFlow
 
 AgentFlow V1 是面向单用户、本地部署的轻量级单 Agent Web 工作台。本仓库当前完成
-Phase 4：在 LangGraph 单 Agent 顺序工具循环基础上提供配置化 `web_search`、带
-SSRF 与重定向复检的 `web_fetch`、网页正文清洗、来源持久化和前端来源展示。
-文件上传、解析、读取和生成仍属于后续 Phase。
+Phase 5：除联网搜索与安全网页读取外，现已支持 PDF、DOCX、TXT、Markdown、CSV
+上传与同步解析，以及线程隔离的 `list_files`、`read_file` Agent 工具。文件生成、
+Artifact 预览下载和完整三栏工作台仍属于 Phase 6。
 
 ## 环境要求
 
@@ -57,7 +57,7 @@ Set-Location backend
 
 ### 配置聊天模型与 Agent Loop
 
-Phase 4 使用一个固定的、支持流式 function/tool calling 的 OpenAI-compatible
+Phase 5 使用一个固定的、支持流式 function/tool calling 的 OpenAI-compatible
 `chat/completions` 端点。在 `backend\.env` 中配置：
 
 ```dotenv
@@ -89,8 +89,21 @@ AGENTFLOW_WEB_FETCH_MAX_BYTES=2000000
 搜索密钥只从环境变量读取。未配置搜索密钥时，普通对话和 `web_fetch` 仍可使用，
 `web_search` 会向模型返回安全的配置错误。网页读取仅允许公网 HTTP(S) URL，并在
 请求前及每次重定向后检查 DNS 解析结果；不会向 SSE 发送网页正文或受限地址。
-当前注册表包含 `get_current_time`、`web_search` 和 `web_fetch`，不包含尚未开发的
-文件工具。
+当前注册表包含 `get_current_time`、`web_search`、`web_fetch`、`list_files` 和
+`read_file`。
+
+### 配置文件上传与解析
+
+文件上传限制和解析文本上限由环境变量集中配置：
+
+```dotenv
+AGENTFLOW_MAX_UPLOAD_SIZE_MB=20
+AGENTFLOW_MAX_PARSED_CHARS=200000
+```
+
+支持 `.pdf`、`.docx`、`.txt`、`.md`、`.csv`。上传文件写入当前会话的受控目录并
+同步生成统一 Markdown；扫描 PDF 会显示 `unsupported_ocr`，不会把空白解析结果交给
+模型。前端文件台支持逐个上传、查看真实解析状态和删除；Agent 读取只接受 `file_id`。
 
 ## 前端安装与启动
 

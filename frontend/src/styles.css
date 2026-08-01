@@ -266,10 +266,10 @@ textarea:focus-visible {
 }
 
 .chat-workspace {
-  display: grid;
+  display: flex;
   min-width: 0;
   min-height: 0;
-  grid-template-rows: auto auto minmax(0, 1fr) auto;
+  flex-direction: column;
   overflow: hidden;
   border: 1px solid rgb(32 42 38 / 7%);
   border-left: 0;
@@ -349,8 +349,113 @@ textarea:focus-visible {
   margin: 12px 34px 0 40px;
 }
 
+.file-shelf {
+  padding: 10px 34px 11px 40px;
+  border-bottom: 1px solid var(--line);
+  background: #f5f8f6;
+}
+
+.file-shelf-heading {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 14px;
+}
+
+.file-shelf-heading > div {
+  display: flex;
+  align-items: baseline;
+  gap: 10px;
+}
+
+.file-shelf-heading .section-label {
+  margin: 0 !important;
+}
+
+.file-shelf-heading .ant-typography:not(.section-label) {
+  color: #50615a;
+  font-size: 12px;
+}
+
+.file-shelf-list {
+  display: flex;
+  gap: 8px;
+  overflow-x: auto;
+  margin-top: 8px;
+  scrollbar-color: #bdc9c3 transparent;
+  scrollbar-width: thin;
+}
+
+.file-shelf-list .ant-empty {
+  display: flex;
+  min-height: 42px;
+  align-items: center;
+  gap: 8px;
+  margin: 0;
+}
+
+.file-shelf-list .ant-empty-image {
+  width: 30px;
+  height: 24px;
+  margin: 0;
+}
+
+.file-shelf-list .ant-empty-description {
+  color: #819089;
+  font-size: 11px;
+}
+
+.file-chip {
+  display: grid;
+  min-width: 260px;
+  max-width: 330px;
+  grid-template-columns: 20px minmax(90px, 1fr) auto 28px;
+  align-items: center;
+  gap: 8px;
+  padding: 7px 6px 7px 10px;
+  border: 1px solid #d7e0db;
+  border-radius: 8px;
+  color: #33715d;
+  background: #fff;
+}
+
+.file-chip-copy {
+  display: flex;
+  min-width: 0;
+  flex-direction: column;
+}
+
+.file-chip-copy strong {
+  overflow: hidden;
+  color: #34423c;
+  font-size: 11px;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.file-chip-copy small {
+  color: #84918b;
+  font-family: "Cascadia Mono", Consolas, monospace;
+  font-size: 8px;
+}
+
+.parse-status.ant-tag {
+  margin: 0;
+  border: 0;
+  color: #236c54;
+  font-size: 9px;
+  background: #e4f2eb;
+}
+
+.parse-status.failed,
+.parse-status.unsupported_ocr {
+  color: #955044;
+  background: #f5e7e4;
+}
+
 .conversation-scroll {
   min-height: 0;
+  flex: 1;
   overflow-y: auto;
   scrollbar-color: #b8c2bd transparent;
   scrollbar-width: thin;
@@ -854,6 +959,22 @@ textarea:focus-visible {
   .chat-header {
     min-height: 72px;
     padding: 13px 18px;
+  }
+
+  .file-shelf {
+    padding: 9px 14px 10px 18px;
+  }
+
+  .file-shelf-heading > div {
+    display: block;
+  }
+
+  .file-shelf-heading .section-label {
+    display: none;
+  }
+
+  .file-chip {
+    min-width: 235px;
   }
 
   .chat-header h2.ant-typography {

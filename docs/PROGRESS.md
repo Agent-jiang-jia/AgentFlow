@@ -405,3 +405,87 @@
 
 - Phase 5 将实现文件上传校验、PDF/DOCX/TXT/Markdown/CSV 解析、线程目录隔离、
   `list_files`/`read_file` 和最小前端文件列表；本次未实现任何 Phase 5 能力。
+
+## 2026-08-01 — Phase 5 文件上传、解析与安全读取
+
+### 完成任务
+
+- 实现 `POST/GET/DELETE /api/threads/{thread_id}/files` 和文件详情 API，响应不包含
+  `stored_path`，跨会话已存在文件统一返回 `FILE_ACCESS_DENIED`。
+- 实现跨平台文件名校验，覆盖路径分隔符、路径穿越、控制字符、Windows 保留名、
+  非法字符、尾随点/空格、扩展名、声明 MIME、实际 PDF/DOCX 格式和空文件。
+- 使用按块读取限制上传大小，实际文件名采用 `{file_id}_{safe_filename}`，所有路径
+  同时验证规范 UUID、数据库 `thread_id` 归属和解析后仍位于线程固定目录。
+- 建立 Parser Registry；PDF 按页提取，扫描件标记 `unsupported_ocr`；DOCX 提取
+  标题、段落、列表和表格；TXT/Markdown 支持 UTF-8、GB18030、Big5；CSV 统计总行数
+  并限制为前 500 行；统一生成有上限的 UTF-8 Markdown。
+- 解析失败保留上传源文件与安全失败元数据，不创建虚假 parsed 文件；删除上传源文件
+  时通过暂存/回滚补偿同步删除关联解析文件和元数据。
+- 实现 `list_files` 和只接受规范 `file_id` 的 `read_file`，支持行窗口、字符上限、
+  截断标识和二进制上传自动读取解析版本；完整工具结果仅进入 `ToolMessage`，SSE 只
+  展示安全摘要。
+- 聊天 `file_ids` 现在验证真实线程归属，并仅向模型上下文加入逻辑 ID，不暴露路径。
+- 前端增加横向最小文件台，支持多选后逐个上传、真实解析状态、大小/类型展示、删除、
+  会话切换恢复和失败后权威列表刷新；未实现 Phase 6 的第三栏、Artifact 或预览下载。
+- 使用 `frontend-design` 保持现有执行账本视觉体系，并用真实浏览器验证桌面和 390px
+  窄屏上传/删除流程。
+- 更新 README、环境示例、API 契约、任务和进度文档。
+
+### 主要修改文件
+
+- `backend/app/api/files.py`、`schemas/file.py`
+- `backend/app/services/file_service.py`、`parser_service.py`
+- `backend/app/storage/file_storage.py`、`filename.py`
+- `backend/app/parsers/*`
+- `backend/app/db/repositories/file_repository.py`
+- `backend/app/tools/list_files.py`、`read_file.py`、Tool Registry/依赖注入
+- `backend/app/services/chat_service.py`
+- `backend/tests/api/test_files.py`、`tests/parsers/*`、`tests/storage/test_filename.py`
+- `frontend/src/api/files.ts`、`components/FileShelf.tsx`
+- `frontend/src/stores/workspaceStore.ts`、类型、样式和 API 测试
+- `README.md`、`.env.example`、`docs/API_SPEC.md`、`docs/TASKS.md`、
+  `docs/PROGRESS.md`
+
+### 执行命令
+
+- `python -m pytest`
+- `python -m ruff format --check .`、`python -m ruff check .`
+- `python -m mypy app tests`、`python -s -m pip check`
+- 使用独立空数据库执行 `alembic upgrade head`、`current`、`check`，并检查 `files`
+  表和 `ix_files_thread_category_created` 索引。
+- `npm run test`、`npm run lint`、`npm run typecheck`、`npm run build`
+- `npm audit --audit-level=high`
+- 使用隔离数据库启动 Uvicorn/Vite，在桌面与 390px 视口上传、解析和删除真实
+  Markdown 文件，并检查 DOM、横向溢出和浏览器控制台。
+- 使用 `rg` 检查占位实现、跳过测试、疑似密钥、绝对路径、固定线程 ID 和敏感字段；
+  执行 `git diff --check`。
+
+### 测试结果
+
+- pytest：最终 78 个测试全部通过；Phase 5 新增覆盖文件名、MIME/实际格式、空文件、
+  大小、五类解析、中文编码、CSV 500 行、扫描 PDF、解析失败状态、文件 CRUD、磁盘
+  级联、聊天附件归属、完整 list/read 工具循环和跨会话工具读取拒绝。
+- Ruff 格式检查和 lint 全部通过；mypy 严格检查全部通过；项目隔离环境依赖完整。
+- Alembic：空数据库升级到 `20260731_0001 (head)`，七张表及文件索引存在，
+  `alembic check` 无模型漂移；本阶段复用初始 `files` 表，没有数据库结构变化。
+- Vitest：4 个测试文件、10 个测试全部通过；ESLint、严格 TypeScript 和 production
+  build 全部通过；npm audit 为 0 个漏洞。
+- 浏览器实测：上传 `README.md` 后显示真实大小、MD 类型和“解析完成”，删除后恢复
+  空态；390px 下 `scrollWidth=innerWidth=390`，无横向溢出，控制台无错误或警告。
+- 安全扫描未发现新增 TODO、`pass`、`NotImplementedError`、跳过测试、真实密钥、
+  硬编码用户绝对路径或固定生产 `thread_id`；PyMuPDF 缺少 typing metadata 的三处
+  `type: ignore[import-untyped]` 均有明确注释。
+
+### 遗留问题
+
+- 未配置真实外部模型凭据，因此未做第三方模型在线文件工具调用；已通过完整脚本模型
+  集成测试验证 `list_files → read_file → ToolMessage → 最终回答` 的真实持久化链路。
+- production build 主 JS chunk 约 875 kB（gzip 约 280 kB），仍有超过 500 kB 的
+  非阻塞提示；继续在 Phase 6 完整工作台形成后按真实页面/功能边界拆包，不提高阈值。
+- pytest 仍显示 Starlette 对旧 422 常量的一条第三方弃用提示，来源于依赖内部异常
+  处理路径，不影响请求行为或本阶段验收。
+
+### 下一阶段
+
+- Phase 6 计划实现安全 `write_file`、Artifact 列表/预览/下载和完整三栏工作台；
+  本次未提前实现任何 Phase 6 业务能力。

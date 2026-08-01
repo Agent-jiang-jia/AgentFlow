@@ -79,6 +79,83 @@ class MessageEmptyError(AppError):
         )
 
 
+class FileNotFoundError(AppError):
+    """Raised when a requested file identifier does not exist."""
+
+    def __init__(self) -> None:
+        super().__init__(
+            code=ErrorCode.FILE_NOT_FOUND,
+            message="文件不存在",
+            status_code=status.HTTP_404_NOT_FOUND,
+        )
+
+
+class FileAccessDeniedError(AppError):
+    """Raised when a file exists outside the requested thread."""
+
+    def __init__(self) -> None:
+        super().__init__(
+            code=ErrorCode.FILE_ACCESS_DENIED,
+            message="无权访问该文件",
+            status_code=status.HTTP_403_FORBIDDEN,
+        )
+
+
+class InvalidFilenameError(AppError):
+    """Raised when an upload name is unsafe on supported platforms."""
+
+    def __init__(self) -> None:
+        super().__init__(
+            code=ErrorCode.INVALID_FILENAME,
+            message="文件名不合法",
+            status_code=status.HTTP_400_BAD_REQUEST,
+        )
+
+
+class FileTypeUnsupportedError(AppError):
+    """Raised when an upload extension or media type is unsupported."""
+
+    def __init__(self) -> None:
+        super().__init__(
+            code=ErrorCode.FILE_TYPE_UNSUPPORTED,
+            message="不支持该文件类型",
+            status_code=status.HTTP_415_UNSUPPORTED_MEDIA_TYPE,
+        )
+
+
+class FileTooLargeError(AppError):
+    """Raised when an upload exceeds the configured byte limit."""
+
+    def __init__(self) -> None:
+        super().__init__(
+            code=ErrorCode.FILE_TOO_LARGE,
+            message="文件超过大小限制",
+            status_code=status.HTTP_413_CONTENT_TOO_LARGE,
+        )
+
+
+class FileParseError(AppError):
+    """Raised after a supported upload cannot be parsed safely."""
+
+    def __init__(self) -> None:
+        super().__init__(
+            code=ErrorCode.FILE_PARSE_FAILED,
+            message="文件解析失败",
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+        )
+
+
+class OcrNotSupportedError(AppError):
+    """Raised when a scanned PDF has no readable text in V1."""
+
+    def __init__(self) -> None:
+        super().__init__(
+            code=ErrorCode.OCR_NOT_SUPPORTED,
+            message="该 PDF 需要 OCR; V1 暂不支持。",
+            status_code=status.HTTP_415_UNSUPPORTED_MEDIA_TYPE,
+        )
+
+
 def _request_id(request: Request) -> str:
     return str(getattr(request.state, "request_id", "unknown"))
 

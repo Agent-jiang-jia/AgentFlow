@@ -1,9 +1,12 @@
 """Registered tools available to the single AgentFlow runtime."""
 
+from app.services.file_service import FileService
 from app.services.source_service import SourceService
 from app.services.web_fetch_service import WebFetchService
 from app.services.web_search_service import WebSearchService
 from app.tools.get_current_time import create_get_current_time_tool
+from app.tools.list_files import create_list_files_tool
+from app.tools.read_file import create_read_file_tool
 from app.tools.registry import ToolRegistry
 from app.tools.web_fetch import create_web_fetch_tool
 from app.tools.web_search import create_web_search_tool
@@ -29,4 +32,27 @@ def create_phase_four_registry(
     return registry
 
 
-__all__ = ["ToolRegistry", "create_phase_four_registry", "create_phase_three_registry"]
+def create_phase_five_registry(
+    *,
+    search_service: WebSearchService,
+    fetch_service: WebFetchService,
+    source_service: SourceService,
+    file_service: FileService,
+) -> ToolRegistry:
+    """Create the Phase 5 registry with thread-scoped file read tools."""
+    registry = create_phase_four_registry(
+        search_service=search_service,
+        fetch_service=fetch_service,
+        source_service=source_service,
+    )
+    registry.register(create_list_files_tool(file_service))
+    registry.register(create_read_file_tool(file_service))
+    return registry
+
+
+__all__ = [
+    "ToolRegistry",
+    "create_phase_five_registry",
+    "create_phase_four_registry",
+    "create_phase_three_registry",
+]

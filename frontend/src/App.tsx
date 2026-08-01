@@ -2,6 +2,7 @@ import { Alert, Tag, Typography } from "antd";
 import { useEffect } from "react";
 
 import { ChatComposer } from "./components/ChatComposer";
+import { FileShelf } from "./components/FileShelf";
 import { MessageTimeline } from "./components/MessageTimeline";
 import { ThreadSidebar } from "./components/ThreadSidebar";
 import { useWorkspaceStore } from "./stores/workspaceStore";
@@ -18,14 +19,18 @@ export default function App() {
   const toolActivities = useWorkspaceStore(
     (state) => state.toolActivities,
   );
+  const files = useWorkspaceStore((state) => state.files);
   const loading = useWorkspaceStore((state) => state.loading);
   const streaming = useWorkspaceStore((state) => state.streaming);
+  const uploading = useWorkspaceStore((state) => state.uploading);
   const error = useWorkspaceStore((state) => state.error);
   const initialize = useWorkspaceStore((state) => state.initialize);
   const createThread = useWorkspaceStore((state) => state.createThread);
   const selectThread = useWorkspaceStore((state) => state.selectThread);
   const deleteThread = useWorkspaceStore((state) => state.deleteThread);
   const sendMessage = useWorkspaceStore((state) => state.sendMessage);
+  const uploadFile = useWorkspaceStore((state) => state.uploadFile);
+  const deleteFile = useWorkspaceStore((state) => state.deleteFile);
   const clearError = useWorkspaceStore((state) => state.clearError);
 
   useEffect(() => {
@@ -41,7 +46,7 @@ export default function App() {
       <ThreadSidebar
         threads={threads}
         currentThreadId={currentThreadId}
-        disabled={streaming}
+        disabled={streaming || uploading}
         onCreate={() => void createThread()}
         onSelect={(threadId) => void selectThread(threadId)}
         onDelete={(threadId) => void deleteThread(threadId)}
@@ -65,6 +70,14 @@ export default function App() {
             {streaming ? "模型运行中" : "就绪"}
           </Tag>
         </header>
+
+        <FileShelf
+          files={files}
+          disabled={currentThreadId === null || streaming || loading || uploading}
+          uploading={uploading}
+          onUpload={uploadFile}
+          onDelete={deleteFile}
+        />
 
         {error !== null && (
           <Alert
@@ -90,7 +103,7 @@ export default function App() {
         </div>
 
         <ChatComposer
-          disabled={currentThreadId === null || streaming || loading}
+          disabled={currentThreadId === null || streaming || loading || uploading}
           streaming={streaming}
           onSend={sendMessage}
         />

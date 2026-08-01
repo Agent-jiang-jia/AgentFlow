@@ -2,12 +2,18 @@ import { create } from "zustand";
 
 import { streamChat } from "../api/chat";
 import {
+  deleteFile as deleteFileRequest,
+  fetchFiles,
+  uploadFile as uploadFileRequest,
+} from "../api/files";
+import {
   createThread as createThreadRequest,
   deleteThread as deleteThreadRequest,
   fetchMessages,
   fetchThreads,
 } from "../api/threads";
 import type {
+  FileMetadata,
   Message,
   SseEvent,
   ThreadSummary,
@@ -24,14 +30,18 @@ interface WorkspaceState {
   messages: Message[];
   streamingMessage: Message | null;
   toolActivities: ToolActivity[];
+  files: FileMetadata[];
   loading: boolean;
   streaming: boolean;
+  uploading: boolean;
   error: string | null;
   initialize: () => Promise<void>;
   createThread: () => Promise<void>;
   selectThread: (threadId: string) => Promise<void>;
   deleteThread: (threadId: string) => Promise<void>;
   sendMessage: (content: string) => Promise<void>;
+  uploadFile: (file: File) => Promise<void>;
+  deleteFile: (fileId: string) => Promise<void>;
   clearError: () => void;
 }
 
@@ -82,8 +92,10 @@ export const useWorkspaceStore = create<WorkspaceState>((set, get) => ({
   messages: [],
   streamingMessage: null,
   toolActivities: [],
+  files: [],
   loading: true,
   streaming: false,
+  uploading: false,
   error: null,
 
   initialize: async () => {
@@ -91,14 +103,18 @@ export const useWorkspaceStore = create<WorkspaceState>((set, get) => ({
     try {
       const threads = await reloadThreads();
       const currentThreadId = threads[0]?.id ?? null;
-      const messages =
+      const [messages, files] =
         currentThreadId === null
-          ? []
-          : (await fetchMessages(currentThreadId)).items;
+          ? [[], []]
+          : await Promise.all([
+              fetchMessages(currentThreadId).then((page) => page.items),
+              fetchFiles(currentThreadId).then((page) => page.items),
+            ]);
       set({
         threads,
         currentThreadId,
         messages,
+        files,
         toolActivities: [],
         loading: false,
       });
@@ -108,7 +124,7 @@ export const useWorkspaceStore = create<WorkspaceState>((set, get) => ({
   },
 
   createThread: async () => {
-    if (get().streaming) {
+    if (get().streaming || get().uploading) {
       return;
     }
     set({ error: null });
@@ -119,6 +135,7 @@ export const useWorkspaceStore = create<WorkspaceState>((set, get) => ({
         threads,
         currentThreadId: thread.id,
         messages: [],
+        files: [],
         streamingMessage: null,
         toolActivities: [],
       });
@@ -128,21 +145,25 @@ export const useWorkspaceStore = create<WorkspaceState>((set, get) => ({
   },
 
   selectThread: async (threadId: string) => {
-    if (get().streaming || get().currentThreadId === threadId) {
+    if (get().streaming || get().uploading || get().currentThreadId === threadId) {
       return;
     }
     set({
       currentThreadId: threadId,
       messages: [],
+      files: [],
       streamingMessage: null,
       toolActivities: [],
       loading: true,
       error: null,
     });
     try {
-      const messages = (await fetchMessages(threadId)).items;
+      const [messages, files] = await Promise.all([
+        fetchMessages(threadId).then((page) => page.items),
+        fetchFiles(threadId).then((page) => page.items),
+      ]);
       if (get().currentThreadId === threadId) {
-        set({ messages, loading: false });
+        set({ messages, files, loading: false });
       }
     } catch (error: unknown) {
       if (get().currentThreadId === threadId) {
@@ -152,7 +173,7 @@ export const useWorkspaceStore = create<WorkspaceState>((set, get) => ({
   },
 
   deleteThread: async (threadId: string) => {
-    if (get().streaming) {
+    if (get().streaming || get().uploading) {
       return;
     }
     set({ error: null });
@@ -163,14 +184,18 @@ export const useWorkspaceStore = create<WorkspaceState>((set, get) => ({
         get().currentThreadId === threadId
           ? (threads[0]?.id ?? null)
           : get().currentThreadId;
-      const messages =
+      const [messages, files] =
         currentThreadId === null
-          ? []
-          : (await fetchMessages(currentThreadId)).items;
+          ? [[], []]
+          : await Promise.all([
+              fetchMessages(currentThreadId).then((page) => page.items),
+              fetchFiles(currentThreadId).then((page) => page.items),
+            ]);
       set({
         threads,
         currentThreadId,
         messages,
+        files,
         streamingMessage: null,
         toolActivities: [],
       });
@@ -259,14 +284,16 @@ export const useWorkspaceStore = create<WorkspaceState>((set, get) => ({
       set({ error: errorMessage(error) });
     } finally {
       try {
-        const [threads, history] = await Promise.all([
+        const [threads, history, filePage] = await Promise.all([
           reloadThreads(),
           fetchMessages(threadId),
+          fetchFiles(threadId),
         ]);
         if (get().currentThreadId === threadId) {
           set({
             threads,
             messages: history.items,
+            files: filePage.items,
             streamingMessage: null,
             streaming: false,
           });
@@ -278,6 +305,56 @@ export const useWorkspaceStore = create<WorkspaceState>((set, get) => ({
           streaming: false,
         });
       }
+    }
+  },
+
+  uploadFile: async (file: File) => {
+    const threadId = get().currentThreadId;
+    if (threadId === null || get().streaming || get().uploading) {
+      return;
+    }
+    set({ uploading: true, error: null });
+    try {
+      await uploadFileRequest(threadId, file);
+      const [files, threads] = await Promise.all([
+        fetchFiles(threadId),
+        reloadThreads(),
+      ]);
+      if (get().currentThreadId === threadId) {
+        set({ files: files.items, threads, uploading: false });
+      } else {
+        set({ threads, uploading: false });
+      }
+    } catch (error: unknown) {
+      let files = get().files;
+      try {
+        files = (await fetchFiles(threadId)).items;
+      } catch {
+        // Preserve the original upload error when refresh also fails.
+      }
+      set({ files, error: errorMessage(error), uploading: false });
+    }
+  },
+
+  deleteFile: async (fileId: string) => {
+    const threadId = get().currentThreadId;
+    if (threadId === null || get().streaming || get().uploading) {
+      return;
+    }
+    set({ uploading: true, error: null });
+    try {
+      await deleteFileRequest(threadId, fileId);
+      const [files, threads] = await Promise.all([
+        fetchFiles(threadId),
+        reloadThreads(),
+      ]);
+      if (get().currentThreadId === threadId) {
+        set({ files: files.items, threads, uploading: false });
+      } else {
+        set({ threads, uploading: false });
+      }
+    } catch (error: unknown) {
+      set({ error: errorMessage(error), uploading: false });
     }
   },
 

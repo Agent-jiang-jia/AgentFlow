@@ -29,10 +29,10 @@
 | P4-02 | 4 | `web_fetch` 与正文清洗 | 工具与抓取服务 | P4-01 | 正文、截断、错误可用 | pytest | DONE |
 | P4-03 | 4 | SSRF 与重定向复检 | security/web_fetch | P4-02 | 私网等全部拒绝 | 安全测试 | DONE |
 | P4-04 | 4 | 来源持久化和展示 | Repository/前端 | P4-01 | 只展示实际使用来源 | 集成测试 | DONE |
-| P5-01 | 5 | 上传校验和线程目录隔离 | 文件 API/Storage | Phase 4 | 格式、MIME、大小和路径安全 | pytest | TODO |
-| P5-02 | 5 | 五类文件解析 | `app/parsers/*` | P5-01 | 统一文本、OCR 状态正确 | 解析测试 | TODO |
-| P5-03 | 5 | `list_files`/`read_file` | 工具/Service | P5-02 | 仅 file_id、跨线程拒绝 | pytest | TODO |
-| P5-04 | 5 | 前端上传和文件列表 | 前端组件/store | P5-01 | 展示真实解析状态 | 前端检查 | TODO |
+| P5-01 | 5 | 上传校验和线程目录隔离 | 文件 API/Storage | Phase 4 | 格式、MIME、大小和路径安全 | pytest | DONE |
+| P5-02 | 5 | 五类文件解析 | `app/parsers/*` | P5-01 | 统一文本、OCR 状态正确 | 解析测试 | DONE |
+| P5-03 | 5 | `list_files`/`read_file` | 工具/Service | P5-02 | 仅 file_id、跨线程拒绝 | pytest | DONE |
+| P5-04 | 5 | 前端上传和文件列表 | 前端组件/store | P5-01 | 展示真实解析状态 | 前端检查 | DONE |
 | P6-01 | 6 | `write_file` 安全生成 | 工具/Storage/Service | Phase 5 | 类型、路径、大小、重名正确 | pytest | TODO |
 | P6-02 | 6 | Artifact 列表、预览、下载 | API/Service | P6-01 | 安全预览下载 | pytest | TODO |
 | P6-03 | 6 | 完整三栏 Web 工作台 | 前端页面/组件 | P6-02 | 满足 PRD 工作台范围 | lint、build、人工验收 | TODO |

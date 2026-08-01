@@ -29,6 +29,7 @@ from app.db.repositories.message_repository import MessageRepository
 from app.db.repositories.run_repository import RunRepository
 from app.db.repositories.thread_repository import ThreadRepository
 from app.schemas.chat import ChatRequest, SseEvent, SseEventName
+from app.services.file_service import FileService
 from app.services.model_client import ModelClientError
 from app.services.source_service import SourceService
 
@@ -48,21 +49,34 @@ class PreparedChat:
 class ChatService:
     """Persist and stream one bounded LangGraph agent run."""
 
-    def __init__(self, *, database: Database, runtime: AgentRuntime) -> None:
+    def __init__(
+        self,
+        *,
+        database: Database,
+        runtime: AgentRuntime,
+        file_service: FileService | None = None,
+    ) -> None:
         self._database = database
         self._runtime = runtime
         self._source_service = SourceService(database)
+        self._file_service = file_service
 
     def prepare(self, *, thread_id: str, request: ChatRequest) -> PreparedChat:
         """Validate and persist the user message before the SSE response starts."""
         content = request.message.strip()
         if not content:
             raise MessageEmptyError
-        if request.file_ids:
+        if request.file_ids and self._file_service is None:
             raise AppError(
                 code=ErrorCode.FILE_NOT_FOUND,
                 message="文件不存在",
                 status_code=404,
+            )
+        file_service = self._file_service
+        if request.file_ids and file_service is not None:
+            file_service.validate_file_ids(
+                thread_id=thread_id,
+                file_ids=tuple(request.file_ids),
             )
 
         run_id = str(uuid4())
@@ -101,7 +115,7 @@ class ChatService:
                         role="user",
                         content=content,
                         message_type="text",
-                        metadata_json={},
+                        metadata_json=({"file_ids": request.file_ids} if request.file_ids else {}),
                         sequence_number=message_repository.next_sequence_number(thread_id),
                         created_at=timestamp,
                     )
@@ -109,7 +123,11 @@ class ChatService:
                 thread_repository.touch(thread, timestamp)
                 session.flush()
                 context = tuple(
-                    self._model_message(message.role, message.content)
+                    self._model_message(
+                        message.role,
+                        message.content,
+                        message.metadata_json,
+                    )
                     for message in message_repository.list_conversation(thread_id)
                 )
                 session.commit()
@@ -366,8 +384,16 @@ class ChatService:
             )
 
     @staticmethod
-    def _model_message(role: str, content: str) -> BaseMessage:
+    def _model_message(
+        role: str,
+        content: str,
+        metadata: dict[str, object] | None = None,
+    ) -> BaseMessage:
         if role == "user":
+            file_ids = (metadata or {}).get("file_ids")
+            if isinstance(file_ids, list) and all(isinstance(item, str) for item in file_ids):
+                attachment_note = ", ".join(file_ids)
+                content = f"{content}\n\n[Selected file_ids: {attachment_note}]"
             return HumanMessage(content=content)
         if role == "assistant":
             return AIMessage(content=content)

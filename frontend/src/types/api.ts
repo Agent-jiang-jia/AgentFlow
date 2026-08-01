@@ -67,3 +67,18 @@ export interface SourceReference {
   snippet: string;
   source_type: "search" | "web_page";
 }
+
+export interface FileMetadata {
+  id: string;
+  thread_id: string;
+  source_file_id: string | null;
+  category: "upload" | "parsed" | "artifact";
+  original_name: string;
+  extension: string | null;
+  mime_type: string | null;
+  size_bytes: number;
+  parse_status: string | null;
+  parse_error: string | null;
+  parsed_file_id: string | null;
+  created_at: string;
+}

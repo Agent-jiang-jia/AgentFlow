@@ -146,6 +146,7 @@
     "mime_type": "application/pdf",
     "size_bytes": 1024,
     "parse_status": "success",
+    "parse_error": null,
     "parsed_file_id": "parsed_file_uuid",
     "created_at": "2026-07-31T15:00:00Z"
   }
