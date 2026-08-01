@@ -1,9 +1,9 @@
 # AgentFlow
 
 AgentFlow V1 是面向单用户、本地部署的轻量级单 Agent Web 工作台。本仓库当前完成
-Phase 3：在会话与普通流式对话基础上提供 LangGraph 单 Agent 顺序工具循环、统一
-Tool Registry、`get_current_time` 验证工具、工具调用持久化、循环/重复/超时保护，
-以及不展示思维链的前端公开工具状态。Web 搜索和文件能力仍属于后续 Phase。
+Phase 4：在 LangGraph 单 Agent 顺序工具循环基础上提供配置化 `web_search`、带
+SSRF 与重定向复检的 `web_fetch`、网页正文清洗、来源持久化和前端来源展示。
+文件上传、解析、读取和生成仍属于后续 Phase。
 
 ## 环境要求
 
@@ -57,7 +57,7 @@ Set-Location backend
 
 ### 配置聊天模型与 Agent Loop
 
-Phase 3 使用一个固定的、支持流式 function/tool calling 的 OpenAI-compatible
+Phase 4 使用一个固定的、支持流式 function/tool calling 的 OpenAI-compatible
 `chat/completions` 端点。在 `backend\.env` 中配置：
 
 ```dotenv
@@ -71,8 +71,26 @@ AGENTFLOW_TOOL_TIMEOUT_SECONDS=30
 
 `MODEL_API_BASE` 也可直接填写以 `/chat/completions` 结尾的地址。密钥只从环境变量
 读取，不要提交 `backend\.env`。未配置模型时，会话 CRUD 仍可使用；发送消息会保留
-用户消息、将 run 标记为失败，并通过 SSE 返回安全的模型不可用提示。当前注册表只
-包含 Phase 3 的 `get_current_time` 验证工具，不包含尚未开发的 Web 或文件工具。
+用户消息、将 run 标记为失败，并通过 SSE 返回安全的模型不可用提示。
+
+### 配置联网搜索与网页读取
+
+V1 使用 Tavily 作为配置化搜索供应商，通过 `httpx` 直接调用其 HTTP API：
+
+```dotenv
+AGENTFLOW_SEARCH_PROVIDER=tavily
+AGENTFLOW_SEARCH_API_BASE=https://api.tavily.com/search
+AGENTFLOW_SEARCH_API_KEY=replace-with-local-secret
+AGENTFLOW_SEARCH_TIMEOUT_SECONDS=10
+AGENTFLOW_WEB_FETCH_TIMEOUT_SECONDS=10
+AGENTFLOW_WEB_FETCH_MAX_BYTES=2000000
+```
+
+搜索密钥只从环境变量读取。未配置搜索密钥时，普通对话和 `web_fetch` 仍可使用，
+`web_search` 会向模型返回安全的配置错误。网页读取仅允许公网 HTTP(S) URL，并在
+请求前及每次重定向后检查 DNS 解析结果；不会向 SSE 发送网页正文或受限地址。
+当前注册表包含 `get_current_time`、`web_search` 和 `web_fetch`，不包含尚未开发的
+文件工具。
 
 ## 前端安装与启动
 

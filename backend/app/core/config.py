@@ -37,13 +37,17 @@ class Settings(BaseSettings):
     model_api_key: SecretStr | None = None
     model_name: str = ""
     model_timeout_seconds: float = Field(default=60.0, gt=0)
+    search_provider: Literal["tavily"] = "tavily"
+    search_api_base: str = "https://api.tavily.com/search"
     search_api_key: SecretStr | None = None
+    search_timeout_seconds: float = Field(default=10.0, gt=0)
 
     max_upload_size_mb: int = Field(default=20, ge=1)
     max_artifact_size_mb: int = Field(default=5, ge=1)
     max_agent_loops: int = Field(default=10, ge=1)
     tool_timeout_seconds: float = Field(default=30.0, gt=0)
     web_fetch_timeout_seconds: float = Field(default=10.0, gt=0)
+    web_fetch_max_bytes: int = Field(default=2_000_000, ge=1024, le=10_000_000)
 
     @field_validator("cors_origins")
     @classmethod

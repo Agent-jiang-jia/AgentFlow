@@ -18,6 +18,8 @@ from app.core.exceptions import register_exception_handlers
 from app.core.logging import configure_logging
 from app.db.database import Database
 from app.services.model_client import OpenAICompatibleChatModel
+from app.services.web_fetch_service import WebFetchService
+from app.services.web_search_service import WebSearchService
 
 logger = logging.getLogger(__name__)
 
@@ -46,6 +48,16 @@ def create_app(settings: Settings | None = None) -> FastAPI:
     application.state.settings = app_settings
     application.state.database = database
     application.state.model_client = OpenAICompatibleChatModel(app_settings)
+    application.state.web_search_service = WebSearchService(
+        provider=app_settings.search_provider,
+        api_base=app_settings.search_api_base,
+        api_key=app_settings.search_api_key,
+        timeout_seconds=app_settings.search_timeout_seconds,
+    )
+    application.state.web_fetch_service = WebFetchService(
+        timeout_seconds=app_settings.web_fetch_timeout_seconds,
+        max_bytes=app_settings.web_fetch_max_bytes,
+    )
 
     application.add_middleware(
         CORSMiddleware,

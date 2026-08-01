@@ -224,12 +224,19 @@ export const useWorkspaceStore = create<WorkspaceState>((set, get) => ({
         }
       } else if (event.event === "assistant_end") {
         const completeContent = event.data.content;
+        const sources = event.data.sources;
         if (typeof completeContent === "string") {
           set((state) => ({
             streamingMessage:
               state.streamingMessage === null
                 ? state.streamingMessage
-                : { ...state.streamingMessage, content: completeContent },
+                : {
+                    ...state.streamingMessage,
+                    content: completeContent,
+                    metadata: Array.isArray(sources)
+                      ? { sources }
+                      : state.streamingMessage.metadata,
+                  },
           }));
         }
       } else if (event.event === "tool_start") {

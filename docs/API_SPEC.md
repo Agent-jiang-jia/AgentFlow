@@ -94,6 +94,10 @@
 }
 ```
 
+助手消息使用 `metadata.sources` 恢复该 run 实际使用的联网来源；无来源消息返回空
+对象。`source_type` 为 `search` 或 `web_page`，同一 run 的相同规范化 URL 只展示
+一次，成功抓取后优先展示 `web_page` 信息。
+
 ### `DELETE /api/threads/{thread_id}`
 
 成功返回 `204`。运行中的线程返回 `409 THREAD_BUSY`。删除数据库关联记录与线程
@@ -231,4 +235,3 @@ V1 正式错误码集合：
 `INVALID_FILENAME`、`ARTIFACT_TOO_LARGE`、`URL_NOT_ALLOWED`、
 `WEB_SEARCH_FAILED`、`WEB_FETCH_FAILED`、`DATABASE_UNAVAILABLE`、
 `REQUEST_VALIDATION_ERROR`、`INTERNAL_ERROR`。
-

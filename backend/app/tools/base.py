@@ -43,6 +43,14 @@ class ToolError:
         }
 
 
+class ToolFailure(Exception):
+    """Expected tool failure carrying a stable public error."""
+
+    def __init__(self, error: ToolError) -> None:
+        super().__init__(error.message)
+        self.error = error
+
+
 @dataclass(frozen=True, slots=True)
 class ToolDefinition:
     """Provider-neutral function definition exposed to the fixed model."""
@@ -73,6 +81,7 @@ class Tool:
     arguments_schema: type[BaseModel]
     handler: ToolHandler
     public_argument_names: tuple[str, ...]
+    stream_argument_names: tuple[str, ...] | None = None
 
     def definition(self) -> ToolDefinition:
         """Build the function definition sent to the model."""
@@ -90,6 +99,15 @@ class Tool:
             for name in self.public_argument_names
             if name in arguments
         }
+
+    def stream_arguments(self, arguments: Mapping[str, object]) -> dict[str, object]:
+        """Return the stricter argument subset allowed in public SSE."""
+        names = (
+            self.public_argument_names
+            if self.stream_argument_names is None
+            else self.stream_argument_names
+        )
+        return {name: arguments[name] for name in names if name in arguments}
 
     async def execute(self, context: ToolContext, arguments: BaseModel) -> ToolOutput:
         """Run the registered asynchronous handler."""

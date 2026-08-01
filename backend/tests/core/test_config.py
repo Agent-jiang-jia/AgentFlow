@@ -15,6 +15,9 @@ def test_example_environment_contains_prd_configuration() -> None:
         "AGENTFLOW_MODEL_NAME",
         "AGENTFLOW_MODEL_TIMEOUT_SECONDS",
         "AGENTFLOW_SEARCH_API_KEY",
+        "AGENTFLOW_SEARCH_PROVIDER",
+        "AGENTFLOW_SEARCH_API_BASE",
+        "AGENTFLOW_SEARCH_TIMEOUT_SECONDS",
         "AGENTFLOW_DATABASE_PATH",
         "AGENTFLOW_DATA_DIR",
         "AGENTFLOW_MAX_UPLOAD_SIZE_MB",
@@ -22,6 +25,7 @@ def test_example_environment_contains_prd_configuration() -> None:
         "AGENTFLOW_MAX_AGENT_LOOPS",
         "AGENTFLOW_TOOL_TIMEOUT_SECONDS",
         "AGENTFLOW_WEB_FETCH_TIMEOUT_SECONDS",
+        "AGENTFLOW_WEB_FETCH_MAX_BYTES",
         "AGENTFLOW_CORS_ORIGINS",
         "AGENTFLOW_LOG_LEVEL",
     }

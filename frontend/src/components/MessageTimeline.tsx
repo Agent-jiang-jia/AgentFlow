@@ -7,6 +7,8 @@ import rehypeHighlight from "rehype-highlight";
 import remarkGfm from "remark-gfm";
 
 import type { Message, ToolActivity } from "../types/api";
+import { parseSources } from "../utils/sources";
+import { SourceReferences } from "./SourceReferences";
 import { ToolStatusLedger } from "./ToolStatusLedger";
 
 interface MessageTimelineProps {
@@ -80,6 +82,7 @@ export function MessageTimeline({
       {visibleMessages.map((message) => {
         const isUser = message.role === "user";
         const isLive = streamingMessage?.id === message.id;
+        const sources = isUser ? [] : parseSources(message.metadata);
         const runActivities =
           message.role === "assistant" && message.run_id !== null
             ? toolActivities.filter(
@@ -129,6 +132,7 @@ export function MessageTimeline({
                     )}
                   </div>
                 )}
+                {!isUser && <SourceReferences sources={sources} />}
               </div>
             </article>
           </Fragment>

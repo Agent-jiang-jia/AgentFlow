@@ -14,7 +14,7 @@ from app.db.database import Database
 from app.db.models.thread import utc_now
 from app.db.models.tool_call import ToolCall
 from app.db.repositories.tool_call_repository import ToolCallRepository
-from app.tools.base import Tool, ToolContext, ToolError, ToolOutput
+from app.tools.base import Tool, ToolContext, ToolError, ToolFailure, ToolOutput
 from app.tools.registry import ToolRegistry
 
 logger = logging.getLogger(__name__)
@@ -188,6 +188,13 @@ class ToolExecutor:
                 tool_call_id=invocation.tool_call_id,
                 tool_name=invocation.tool_name,
             )
+        except ToolFailure as exc:
+            execution = self._error_result(
+                exc.error,
+                status="failed",
+                tool_call_id=invocation.tool_call_id,
+                tool_name=invocation.tool_name,
+            )
         except Exception:
             logger.exception(
                 "Tool execution failed",
@@ -244,6 +251,15 @@ class ToolExecutor:
     def display_name(self, tool_name: str) -> str:
         """Return the registry's allow-listed public status label."""
         return self._registry.display_name(tool_name)
+
+    def stream_arguments(
+        self,
+        tool_name: str,
+        arguments: Mapping[str, object],
+    ) -> dict[str, object]:
+        """Return only arguments approved for the public tool-start event."""
+        tool = self._registry.get(tool_name)
+        return tool.stream_arguments(arguments) if tool is not None else {}
 
     @staticmethod
     def _signature(tool_name: str, arguments: Mapping[str, object]) -> str:

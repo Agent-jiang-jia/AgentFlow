@@ -121,9 +121,21 @@ Artifact 已完成写入并持久化。
 ```json
 {
   "message_id":"message_uuid",
-  "content":"完整最终回答"
+  "content":"完整最终回答",
+  "sources":[
+    {
+      "title":"页面标题",
+      "url":"https://example.com/article",
+      "snippet":"安全摘要",
+      "source_type":"web_page"
+    }
+  ]
 }
 ```
+
+`sources` 只包含本次 run 的 `web_search`/`web_fetch` 实际结果，并与助手消息
+`metadata.sources` 同步持久化；没有来源时为空数组。URL 为经过规范化的 HTTP(S)
+地址，不包含服务器路径或内部网络地址。
 
 失败且没有有效助手回答时不发送虚假的 `assistant_end`。
 
@@ -188,4 +200,3 @@ run_start → ... → error → run_end(status=failed)
 - 响应设置禁止缓存和代理缓冲的头。
 - 前端遇到未知事件应忽略并记录，不中断已知事件解析。
 - JSON 解析失败时前端显示协议错误并重新加载该线程的权威历史。
-

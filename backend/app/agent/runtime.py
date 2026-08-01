@@ -268,7 +268,10 @@ class AgentRuntime:
                         tool_call_id=pending.tool_call_id,
                         tool_name=pending.tool_name,
                         display_name=self._executor.display_name(pending.tool_name),
-                        arguments=invocation.public_arguments,
+                        arguments=self._executor.stream_arguments(
+                            pending.tool_name,
+                            invocation.public_arguments,
+                        ),
                     )
                 )
                 execution = await self._executor.execute(invocation)

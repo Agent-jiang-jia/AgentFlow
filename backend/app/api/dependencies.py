@@ -10,9 +10,12 @@ from app.db.database import Database
 from app.services.chat_service import ChatService
 from app.services.health_service import HealthService
 from app.services.model_client import ChatModel
+from app.services.source_service import SourceService
 from app.services.thread_service import ThreadService
+from app.services.web_fetch_service import WebFetchService
+from app.services.web_search_service import WebSearchService
 from app.storage.thread_storage import ThreadStorage
-from app.tools import create_phase_three_registry
+from app.tools import create_phase_four_registry
 from app.tools.executor import ToolExecutor
 
 
@@ -38,7 +41,13 @@ def get_chat_service(request: Request) -> ChatService:
     database = cast(Database, request.app.state.database)
     settings = cast(Settings, request.app.state.settings)
     model = cast(ChatModel, request.app.state.model_client)
-    registry = create_phase_three_registry()
+    search_service = cast(WebSearchService, request.app.state.web_search_service)
+    fetch_service = cast(WebFetchService, request.app.state.web_fetch_service)
+    registry = create_phase_four_registry(
+        search_service=search_service,
+        fetch_service=fetch_service,
+        source_service=SourceService(database),
+    )
     executor = ToolExecutor(
         database=database,
         registry=registry,

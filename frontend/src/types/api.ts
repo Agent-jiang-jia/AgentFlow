@@ -60,3 +60,10 @@ export interface ToolActivity {
   status: ToolActivityStatus;
   summary: string | null;
 }
+
+export interface SourceReference {
+  title: string;
+  url: string;
+  snippet: string;
+  source_type: "search" | "web_page";
+}

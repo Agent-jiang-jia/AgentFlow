@@ -30,6 +30,7 @@ from app.db.repositories.run_repository import RunRepository
 from app.db.repositories.thread_repository import ThreadRepository
 from app.schemas.chat import ChatRequest, SseEvent, SseEventName
 from app.services.model_client import ModelClientError
+from app.services.source_service import SourceService
 
 logger = logging.getLogger(__name__)
 
@@ -50,6 +51,7 @@ class ChatService:
     def __init__(self, *, database: Database, runtime: AgentRuntime) -> None:
         self._database = database
         self._runtime = runtime
+        self._source_service = SourceService(database)
 
     def prepare(self, *, thread_id: str, request: ChatRequest) -> PreparedChat:
         """Validate and persist the user message before the SSE response starts."""
@@ -206,7 +208,7 @@ class ChatService:
 
             if not outcome.content:
                 raise ModelClientError("Model returned no final text")
-            self._complete_success(
+            sources = self._complete_success(
                 prepared,
                 outcome.content,
                 loop_count=loop_count,
@@ -275,6 +277,7 @@ class ChatService:
             {
                 "message_id": prepared.assistant_message_id,
                 "content": outcome.content,
+                "sources": sources,
             },
         ).encode()
         yield self._event(
@@ -289,7 +292,11 @@ class ChatService:
         content: str,
         *,
         loop_count: int,
-    ) -> None:
+    ) -> list[dict[str, str]]:
+        sources = self._source_service.list_public(
+            run_id=prepared.run_id,
+            thread_id=prepared.thread_id,
+        )
         timestamp = utc_now()
         with self._database.session_factory() as session:
             session.execute(text("BEGIN IMMEDIATE"))
@@ -310,7 +317,7 @@ class ChatService:
                     role="assistant",
                     content=content,
                     message_type="text",
-                    metadata_json={},
+                    metadata_json={"sources": sources} if sources else {},
                     sequence_number=messages.next_sequence_number(prepared.thread_id),
                     created_at=timestamp,
                 )
@@ -325,6 +332,7 @@ class ChatService:
                     thread.title = self._title_from(first_user_message.content)
             ThreadRepository(session).touch(thread, timestamp)
             session.commit()
+        return sources
 
     def _mark_terminal(
         self,

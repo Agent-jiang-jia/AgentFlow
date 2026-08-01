@@ -584,6 +584,70 @@ textarea:focus-visible {
   text-align: left;
 }
 
+.source-references {
+  min-width: 0;
+  overflow: hidden;
+  margin-top: 18px;
+  border-top: 1px solid var(--line);
+}
+
+.source-heading {
+  display: flex;
+  justify-content: space-between;
+  padding: 9px 0 7px;
+  color: #75867e;
+  font-family: "Cascadia Mono", Consolas, monospace;
+  font-size: 9px;
+  letter-spacing: 0.13em;
+}
+
+.source-references ol {
+  display: grid;
+  min-width: 0;
+  gap: 7px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.source-references li {
+  min-width: 0;
+  padding: 9px 11px;
+  border: 1px solid #d9e2dd;
+  border-radius: 7px;
+  background: #f7f9f8;
+}
+
+.source-references a {
+  display: flex;
+  min-width: 0;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  color: #205f4c;
+  font-size: 12px;
+  font-weight: 650;
+  text-decoration: none;
+}
+
+.source-references a span {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.source-references p {
+  display: -webkit-box;
+  overflow: hidden;
+  margin: 5px 0 0;
+  color: #6b7a73;
+  font-size: 11px;
+  line-height: 1.55;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 2;
+}
+
 .typing-cursor {
   display: inline-block;
   width: 8px;

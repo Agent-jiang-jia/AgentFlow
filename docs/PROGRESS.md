@@ -326,3 +326,82 @@
 
 - Phase 4 将实现配置化 `web_search`、安全 `web_fetch`、SSRF 与重定向复检以及
   来源持久化；本次未实现任何 Phase 4 能力。
+
+## 2026-08-01 — Phase 4 联网搜索、网页读取与来源展示
+
+### 完成任务
+
+- 选择 Tavily 作为 V1 单一配置化搜索供应商，通过 `httpx` HTTP API 实现
+  `web_search`；支持中英文查询、默认 5/最多 10 条、URL 规范化、过滤和去重。
+- 实现 `web_fetch` 的 HTML 下载、字节上限、媒体类型校验、最多 5 次手动重定向、
+  readability-lxml 主体抽取、BeautifulSoup 清洗、正文规范化和字符截断。
+- 实现公网 HTTP(S) URL 校验：拒绝凭据、非 HTTP 协议、localhost、回环、私网、
+  链路本地、元数据地址、保留/非全局地址和混合 DNS 结果；每次重定向前重新解析。
+- 为可预期 Web 失败增加稳定的 `URL_NOT_ALLOWED`、`WEB_SEARCH_FAILED` 和
+  `WEB_FETCH_FAILED` 工具结果，失败结果返回模型继续处理，不使 run 崩溃。
+- 实现来源 Repository/Service，按 `(run_id, url)` 去重；同一 URL 从搜索结果被
+  实际抓取后升级为 `web_page`，并写入既有 `sources` 表。
+- 将来源同步写入助手消息 `metadata.sources` 和 `assistant_end.sources`，前端可在
+  流式完成后及刷新恢复后展示安全链接、标题和摘要。
+- 对 `web_fetch` 的 SSE 参数采用更严格白名单，不公开 URL，避免受限地址出现在
+  公开事件；网页正文始终只进入模型 ToolMessage，不进入 SSE。
+- 使用隔离数据库和本地生产构建完成桌面/390px 窄屏浏览器验证；发现并修复长英文
+  来源标题导致窄屏横向溢出的问题，浏览器控制台无错误或警告。
+- 更新 README、环境配置示例、API/SSE 契约、架构决策、任务和进度文档。
+
+### 主要修改文件
+
+- `backend/app/core/security.py`、`config.py`
+- `backend/app/services/web_search_service.py`、`web_fetch_service.py`、
+  `source_service.py`
+- `backend/app/tools/web_search.py`、`web_fetch.py`、Tool Registry/Executor
+- `backend/app/db/repositories/source_repository.py`
+- `backend/app/services/chat_service.py`、`api/dependencies.py`、`main.py`
+- `backend/tests/api/test_web_tools.py`
+- `backend/tests/core/test_security.py`
+- `backend/tests/services/test_web_search_service.py`、`test_web_fetch_service.py`
+- `frontend/src/components/SourceReferences.tsx`、`MessageTimeline.tsx`
+- `frontend/src/utils/sources.ts` 及测试、store、类型和样式
+- `README.md`、`.env.example` 和 Phase 4 设计/跟踪文档
+
+### 执行命令
+
+- `python -m pytest`
+- `python -m ruff format --check .`
+- `python -m ruff check .`
+- `python -m mypy app tests`
+- `python -s -m pip check`
+- 使用独立空数据库执行 `alembic upgrade head`、`current`、`check`，检查七张表、
+  `sources` 索引和 `(run_id, url)` 唯一约束。
+- `npm run test`、`npm run lint`、`npm run typecheck`、`npm run build`
+- `npm audit --audit-level=high`
+- 使用隔离数据库启动 Uvicorn，并以 production build 完成桌面和 390px 窄屏验证。
+- 使用 `rg` 检查占位实现、跳过测试、疑似密钥、绝对路径、固定线程 ID 和 Phase 5+
+  业务实现；执行 `git diff --check`。
+
+### 测试结果
+
+- pytest：54 个测试全部通过；新增覆盖中英文搜索、结果限制/过滤/去重、配置和供应商
+  失败、正文清洗/截断、下载字节上限、非 HTML、私网/回环/元数据/非 HTTP 拒绝、
+  混合 DNS、重定向复检、工具失败继续执行、来源去重升级、SSE 和历史恢复。
+- Ruff：69 个文件格式检查与 lint 全部通过；mypy：67 个源文件严格检查通过。
+- Alembic：空数据库升级到 `20260731_0001 (head)`，无模型漂移；本阶段复用初始
+  `sources` 表和约束，没有数据库结构变化，因此未创建新 revision。
+- Vitest：3 个测试文件、7 个测试全部通过；ESLint、严格 TypeScript 和 production
+  build 全部通过；npm audit 为 0 个漏洞。
+- 浏览器实测：桌面和 390px 窄屏均能恢复并展示来源；长标题正确省略，摘要受限，
+  无横向溢出，外链具备 `noopener`/`noreferrer`，控制台无错误或警告。
+- 范围与安全扫描：未发现新增 TODO、`pass`、`NotImplementedError`、跳过测试、
+  真实密钥、硬编码用户绝对路径、固定生产 thread ID 或 Phase 5+ 业务能力。
+
+### 遗留问题
+
+- 未配置真实 Tavily 与模型凭据，因此未进行第三方在线调用；已使用真实 `httpx`
+  请求/响应路径的 MockTransport 验证供应商协议，并通过完整 API 工具循环集成测试。
+- production build 主 JS chunk 约 868 kB（gzip 约 278 kB），仍有超过 500 kB 的
+  非阻塞提示；继续按既定 Phase 6 完整工作台边界拆包，不提高阈值掩盖提示。
+
+### 下一阶段
+
+- Phase 5 将实现文件上传校验、PDF/DOCX/TXT/Markdown/CSV 解析、线程目录隔离、
+  `list_files`/`read_file` 和最小前端文件列表；本次未实现任何 Phase 5 能力。

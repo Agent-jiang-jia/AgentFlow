@@ -25,10 +25,10 @@
 | P3-02 | 3 | LangGraph 单 Agent 循环 | `app/agent/*` | P3-01 | 工具结果返回模型 | pytest | DONE |
 | P3-03 | 3 | 循环/重复/超时保护和工具记录 | Agent/Service/Repository | P3-02 | 保护和持久化正确 | pytest | DONE |
 | P3-04 | 3 | 前端工具公开状态 | 前端组件/store | P3-02 | 不展示思维链 | 前端检查 | DONE |
-| P4-01 | 4 | `web_search` | 工具与搜索服务 | Phase 3 | 中英文、限制、去重可用 | pytest、集成测试 | TODO |
-| P4-02 | 4 | `web_fetch` 与正文清洗 | 工具与抓取服务 | P4-01 | 正文、截断、错误可用 | pytest | TODO |
-| P4-03 | 4 | SSRF 与重定向复检 | security/web_fetch | P4-02 | 私网等全部拒绝 | 安全测试 | TODO |
-| P4-04 | 4 | 来源持久化和展示 | Repository/前端 | P4-01 | 只展示实际使用来源 | 集成测试 | TODO |
+| P4-01 | 4 | `web_search` | 工具与搜索服务 | Phase 3 | 中英文、限制、去重可用 | pytest、集成测试 | DONE |
+| P4-02 | 4 | `web_fetch` 与正文清洗 | 工具与抓取服务 | P4-01 | 正文、截断、错误可用 | pytest | DONE |
+| P4-03 | 4 | SSRF 与重定向复检 | security/web_fetch | P4-02 | 私网等全部拒绝 | 安全测试 | DONE |
+| P4-04 | 4 | 来源持久化和展示 | Repository/前端 | P4-01 | 只展示实际使用来源 | 集成测试 | DONE |
 | P5-01 | 5 | 上传校验和线程目录隔离 | 文件 API/Storage | Phase 4 | 格式、MIME、大小和路径安全 | pytest | TODO |
 | P5-02 | 5 | 五类文件解析 | `app/parsers/*` | P5-01 | 统一文本、OCR 状态正确 | 解析测试 | TODO |
 | P5-03 | 5 | `list_files`/`read_file` | 工具/Service | P5-02 | 仅 file_id、跨线程拒绝 | pytest | TODO |
