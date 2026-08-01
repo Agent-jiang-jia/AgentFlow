@@ -1,0 +1,105 @@
+:root {
+  --ink: #17201d;
+  --muted: #557269;
+  --surface: #f8faf9;
+  --canvas: #eef2ef;
+  --agent-green: #235f51;
+  --agent-mint: #b8d6c9;
+  color: var(--ink);
+  background: var(--canvas);
+  font-family:
+    "Segoe UI", "Microsoft YaHei", system-ui, -apple-system, sans-serif;
+  font-synthesis: none;
+  text-rendering: optimizeLegibility;
+}
+
+* {
+  box-sizing: border-box;
+}
+
+body {
+  margin: 0;
+  min-width: 320px;
+  min-height: 100vh;
+}
+
+button,
+input,
+textarea {
+  font: inherit;
+}
+
+.app-shell {
+  display: grid;
+  min-height: 100vh;
+  place-items: center;
+  padding: 32px;
+  background:
+    radial-gradient(circle at 18% 16%, rgb(35 95 81 / 14%), transparent 36%),
+    linear-gradient(145deg, #f7f9f7 0%, #e8efeb 100%);
+}
+
+.status-card {
+  position: relative;
+  overflow: hidden;
+  width: min(680px, 100%);
+  border: 1px solid rgb(23 32 29 / 8%);
+  box-shadow: 0 24px 80px rgb(25 55 46 / 12%);
+}
+
+.status-card::before {
+  position: absolute;
+  top: 0;
+  right: 0;
+  left: 0;
+  height: 4px;
+  background: repeating-linear-gradient(
+    90deg,
+    var(--agent-green) 0 72px,
+    var(--agent-mint) 72px 82px
+  );
+  content: "";
+}
+
+.status-card .ant-typography {
+  margin: 0;
+}
+
+.status-card h1.ant-typography {
+  font-family:
+    Bahnschrift, "Arial Narrow", "Microsoft YaHei", sans-serif;
+  font-stretch: condensed;
+  letter-spacing: -0.035em;
+}
+
+.eyebrow {
+  color: var(--muted);
+  font-size: 12px;
+  font-weight: 700;
+  letter-spacing: 0.16em;
+  font-family: "Cascadia Mono", Consolas, monospace;
+}
+
+.connection-panel {
+  min-height: 82px;
+  padding: 18px 20px;
+  border: 1px solid #d7dfdb;
+  border-radius: 12px;
+  background: var(--surface);
+}
+
+.connection-panel.healthy {
+  border-color: var(--agent-mint);
+  background: #f0f8f4;
+}
+
+.success-icon {
+  color: #23855f;
+  font-size: 20px;
+}
+
+@media (max-width: 520px) {
+  .app-shell {
+    padding: 16px;
+  }
+}

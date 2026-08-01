@@ -1,0 +1,37 @@
+# Codex/code intelligence metadata
+.codegraph/
+
+# Environment and secrets
+.env
+backend/.env
+frontend/.env
+*.local
+
+# Python
+__pycache__/
+*.py[cod]
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+.coverage
+htmlcov/
+backend/.venv/
+backend/*.egg-info/
+
+# Runtime data
+backend/data/*
+!backend/data/.gitkeep
+
+# Node / Vite
+frontend/node_modules/
+frontend/dist/
+frontend/.vite/
+frontend/*.tsbuildinfo
+frontend/node_modules/.tmp/
+
+# Editors and OS
+.idea/
+.vscode/
+.DS_Store
+Thumbs.db
+
