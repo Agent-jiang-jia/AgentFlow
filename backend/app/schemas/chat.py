@@ -21,7 +21,7 @@ SseEventName = Literal[
 
 
 class ChatRequest(BaseModel):
-    """Plain Phase 2 chat input."""
+    """Chat input for one bounded single-agent run."""
 
     message: str = Field(max_length=20_000)
     file_ids: list[str] = Field(default_factory=list, max_length=20)

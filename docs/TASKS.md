@@ -21,10 +21,10 @@
 | P2-02 | 2 | 消息持久化与 20 轮上下文 | 消息 Repository/Service | P2-01 | 顺序和线程隔离正确 | pytest | DONE |
 | P2-03 | 2 | 普通模型流式对话和标题 | chat API/Service、SSE | P2-02 | 不调用工具即可流式对话 | pytest、集成测试 | DONE |
 | P2-04 | 2 | 基础聊天前端 | 前端 API/store/components | P2-03 | 可创建、切换并恢复对话 | lint、typecheck、build | DONE |
-| P3-01 | 3 | Tool Registry 与测试工具 | `app/tools/*` | Phase 2 | 注册、校验、调用闭环 | pytest | TODO |
-| P3-02 | 3 | LangGraph 单 Agent 循环 | `app/agent/*` | P3-01 | 工具结果返回模型 | pytest | TODO |
-| P3-03 | 3 | 循环/重复/超时保护和工具记录 | Agent/Service/Repository | P3-02 | 保护和持久化正确 | pytest | TODO |
-| P3-04 | 3 | 前端工具公开状态 | 前端组件/store | P3-02 | 不展示思维链 | 前端检查 | TODO |
+| P3-01 | 3 | Tool Registry 与测试工具 | `app/tools/*` | Phase 2 | 注册、校验、调用闭环 | pytest | DONE |
+| P3-02 | 3 | LangGraph 单 Agent 循环 | `app/agent/*` | P3-01 | 工具结果返回模型 | pytest | DONE |
+| P3-03 | 3 | 循环/重复/超时保护和工具记录 | Agent/Service/Repository | P3-02 | 保护和持久化正确 | pytest | DONE |
+| P3-04 | 3 | 前端工具公开状态 | 前端组件/store | P3-02 | 不展示思维链 | 前端检查 | DONE |
 | P4-01 | 4 | `web_search` | 工具与搜索服务 | Phase 3 | 中英文、限制、去重可用 | pytest、集成测试 | TODO |
 | P4-02 | 4 | `web_fetch` 与正文清洗 | 工具与抓取服务 | P4-01 | 正文、截断、错误可用 | pytest | TODO |
 | P4-03 | 4 | SSRF 与重定向复检 | security/web_fetch | P4-02 | 私网等全部拒绝 | 安全测试 | TODO |

@@ -4,6 +4,7 @@ from collections.abc import AsyncIterator, Sequence
 from typing import cast
 
 import pytest
+from app.agent.runtime import AgentRuntime
 from app.core.config import Settings
 from app.db.database import Database
 from app.db.models.message import Message
@@ -12,17 +13,26 @@ from app.db.models.thread import Thread
 from app.main import create_app
 from app.schemas.chat import ChatRequest
 from app.services.chat_service import ChatService
-from app.services.model_client import ModelMessage
+from app.services.model_client import ModelStreamChunk
+from app.tools import create_phase_three_registry
+from app.tools.base import ToolDefinition
+from app.tools.executor import ToolExecutor
 from httpx import ASGITransport, AsyncClient
+from langchain_core.messages import BaseMessage
 from sqlalchemy import func, select
 
 
 class StaticModel:
     """Small deterministic model used to create persisted chat state."""
 
-    async def stream(self, messages: Sequence[ModelMessage]) -> AsyncIterator[str]:
+    async def stream(
+        self,
+        messages: Sequence[BaseMessage],
+        tools: Sequence[ToolDefinition],
+    ) -> AsyncIterator[ModelStreamChunk]:
         assert messages
-        yield "已记录"
+        assert tools
+        yield ModelStreamChunk(content="已记录")
 
 
 @pytest.mark.anyio
@@ -89,7 +99,20 @@ async def test_delete_rejects_active_run_and_then_cascades_chat_records(
     ):
         thread_id = (await client.post("/api/threads")).json()["id"]
         database = cast(Database, app.state.database)
-        service = ChatService(database=database, model=cast(StaticModel, app.state.model_client))
+        registry = create_phase_three_registry()
+        service = ChatService(
+            database=database,
+            runtime=AgentRuntime(
+                model=cast(StaticModel, app.state.model_client),
+                registry=registry,
+                executor=ToolExecutor(
+                    database=database,
+                    registry=registry,
+                    timeout_seconds=migrated_settings.tool_timeout_seconds,
+                ),
+                max_loops=migrated_settings.max_agent_loops,
+            ),
+        )
         prepared = service.prepare(
             thread_id=thread_id,
             request=ChatRequest(message="保留这条消息"),

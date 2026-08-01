@@ -15,6 +15,9 @@ export default function App() {
   const streamingMessage = useWorkspaceStore(
     (state) => state.streamingMessage,
   );
+  const toolActivities = useWorkspaceStore(
+    (state) => state.toolActivities,
+  );
   const loading = useWorkspaceStore((state) => state.loading);
   const streaming = useWorkspaceStore((state) => state.streaming);
   const error = useWorkspaceStore((state) => state.error);
@@ -78,6 +81,7 @@ export default function App() {
           <MessageTimeline
             messages={messages}
             streamingMessage={streamingMessage}
+            toolActivities={toolActivities}
             loading={loading}
             streaming={streaming}
             hasThread={currentThreadId !== null}

@@ -7,13 +7,23 @@ import {
   fetchMessages,
   fetchThreads,
 } from "../api/threads";
-import type { Message, SseEvent, ThreadSummary } from "../types/api";
+import type {
+  Message,
+  SseEvent,
+  ThreadSummary,
+  ToolActivity,
+} from "../types/api";
+import {
+  applyToolResult,
+  applyToolStart,
+} from "../utils/toolActivity";
 
 interface WorkspaceState {
   threads: ThreadSummary[];
   currentThreadId: string | null;
   messages: Message[];
   streamingMessage: Message | null;
+  toolActivities: ToolActivity[];
   loading: boolean;
   streaming: boolean;
   error: string | null;
@@ -45,13 +55,14 @@ function localUserMessage(threadId: string, content: string): Message {
 
 function localAssistantMessage(
   threadId: string,
+  runId: string,
   messageId: string,
   content = "",
 ): Message {
   return {
     id: messageId,
     thread_id: threadId,
-    run_id: null,
+    run_id: runId,
     role: "assistant",
     content,
     message_type: "text",
@@ -70,6 +81,7 @@ export const useWorkspaceStore = create<WorkspaceState>((set, get) => ({
   currentThreadId: null,
   messages: [],
   streamingMessage: null,
+  toolActivities: [],
   loading: true,
   streaming: false,
   error: null,
@@ -83,7 +95,13 @@ export const useWorkspaceStore = create<WorkspaceState>((set, get) => ({
         currentThreadId === null
           ? []
           : (await fetchMessages(currentThreadId)).items;
-      set({ threads, currentThreadId, messages, loading: false });
+      set({
+        threads,
+        currentThreadId,
+        messages,
+        toolActivities: [],
+        loading: false,
+      });
     } catch (error: unknown) {
       set({ error: errorMessage(error), loading: false });
     }
@@ -102,6 +120,7 @@ export const useWorkspaceStore = create<WorkspaceState>((set, get) => ({
         currentThreadId: thread.id,
         messages: [],
         streamingMessage: null,
+        toolActivities: [],
       });
     } catch (error: unknown) {
       set({ error: errorMessage(error) });
@@ -116,6 +135,7 @@ export const useWorkspaceStore = create<WorkspaceState>((set, get) => ({
       currentThreadId: threadId,
       messages: [],
       streamingMessage: null,
+      toolActivities: [],
       loading: true,
       error: null,
     });
@@ -147,7 +167,13 @@ export const useWorkspaceStore = create<WorkspaceState>((set, get) => ({
         currentThreadId === null
           ? []
           : (await fetchMessages(currentThreadId)).items;
-      set({ threads, currentThreadId, messages, streamingMessage: null });
+      set({
+        threads,
+        currentThreadId,
+        messages,
+        streamingMessage: null,
+        toolActivities: [],
+      });
     } catch (error: unknown) {
       set({ error: errorMessage(error) });
     }
@@ -163,6 +189,7 @@ export const useWorkspaceStore = create<WorkspaceState>((set, get) => ({
     set((state) => ({
       messages: [...state.messages, localUserMessage(threadId, content)],
       streamingMessage: null,
+      toolActivities: [],
       streaming: true,
       error: null,
     }));
@@ -175,7 +202,11 @@ export const useWorkspaceStore = create<WorkspaceState>((set, get) => ({
         const messageId = event.data.message_id;
         if (typeof messageId === "string") {
           set({
-            streamingMessage: localAssistantMessage(threadId, messageId),
+            streamingMessage: localAssistantMessage(
+              threadId,
+              event.run_id,
+              messageId,
+            ),
           });
         }
       } else if (event.event === "assistant_delta") {
@@ -201,6 +232,14 @@ export const useWorkspaceStore = create<WorkspaceState>((set, get) => ({
                 : { ...state.streamingMessage, content: completeContent },
           }));
         }
+      } else if (event.event === "tool_start") {
+        set((state) => ({
+          toolActivities: applyToolStart(state.toolActivities, event),
+        }));
+      } else if (event.event === "tool_result") {
+        set((state) => ({
+          toolActivities: applyToolResult(state.toolActivities, event),
+        }));
       } else if (event.event === "error") {
         const message = event.data.message;
         set({ error: typeof message === "string" ? message : "对话执行失败" });

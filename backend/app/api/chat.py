@@ -1,4 +1,4 @@
-"""Plain streaming chat API."""
+"""Single-agent streaming chat API."""
 
 from typing import Annotated
 
@@ -18,7 +18,7 @@ def stream_chat(
     request: ChatRequest,
     service: Annotated[ChatService, Depends(get_chat_service)],
 ) -> StreamingResponse:
-    """Persist user input and stream a direct model response over SSE."""
+    """Persist user input and stream a bounded agent response over SSE."""
     prepared = service.prepare(thread_id=thread_id, request=request)
     return StreamingResponse(
         service.stream(prepared),

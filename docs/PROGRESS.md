@@ -240,3 +240,89 @@
 
 - Phase 3 将实现 Tool Registry、`get_current_time` 测试工具、LangGraph 单 Agent
   顺序工具循环，以及循环/重复/超时保护和公开工具状态；本次未提前实现。
+
+## 2026-08-01 — Phase 3 LangGraph 单 Agent 工具循环
+
+### 完成任务
+
+- 建立统一 Tool Registry，支持唯一注册、精确查找、模型工具描述、Pydantic v2
+  参数模型和公开参数白名单。
+- 实现临时验证工具 `get_current_time`，使用 `UTC` 或数字 UTC offset，避免依赖
+  Windows 不稳定的 IANA 时区数据。
+- 将固定 OpenAI-compatible 客户端升级为流式文本与 function/tool call 增量解析，
+  并支持 assistant tool call 和 `ToolMessage` 的后续请求序列化。
+- 使用 LangGraph 建立单一 `assistant`/`tools` 状态图；模型请求的多个工具严格按
+  顺序执行，工具结构化结果作为 LangChain `ToolMessage` 返回同一模型。
+- 实现最大模型循环、规范化参数重复检测和 `asyncio.timeout` 工具超时保护；参数
+  错误、未知工具、重复、超时和内部异常均转换为安全工具结果，不中断服务进程。
+- 完成 `tool_calls` 的 running/success/failed/timeout/rejected 生命周期持久化，
+  保存安全参数、结构化结果、起止时间和非负耗时；run 保存真实 loop count 和
+  `max_loops_reached` 终态。
+- 扩展 SSE `tool_start`/`tool_result`，只发送白名单状态、公开参数和安全摘要，不
+  发送完整工具结果、堆栈、绝对路径或模型思维链。
+- 在现有工作台中增加工具执行轨迹卡片，按 run 和调用顺序展示执行中、完成、失败、
+  超时和阻止状态；未知或畸形事件不会破坏已知事件处理。
+- 更新 README 的 Phase 3 状态、模型工具调用要求和循环/超时配置说明。
+
+### 主要修改文件
+
+- `backend/app/agent/runtime.py`
+- `backend/app/tools/base.py`、`registry.py`、`executor.py`
+- `backend/app/tools/get_current_time.py`
+- `backend/app/services/model_client.py`、`chat_service.py`
+- `backend/app/db/repositories/tool_call_repository.py`
+- `backend/tests/api/test_chat.py`
+- `backend/tests/services/test_model_client.py`
+- `backend/tests/tools/test_registry.py`
+- `frontend/src/components/ToolStatusLedger.tsx`
+- `frontend/src/stores/workspaceStore.ts`
+- `frontend/src/utils/toolActivity.ts` 及测试
+- `frontend/src/types/api.ts`、`styles.css`
+- `README.md`、`docs/TASKS.md`、`docs/PROGRESS.md`
+
+### 执行命令
+
+- `python -m ruff format --check .`
+- `python -m ruff check .`
+- `python -m mypy app tests`
+- `python -m pytest`
+- `python -s -m pip check`
+- 使用独立临时空数据库执行 `alembic upgrade head`、`current`、`check`，并检查
+  七张表和 `tool_calls` 三个索引。
+- `npm run test`
+- `npm run lint`
+- `npm run typecheck`
+- `npm run build`
+- `npm audit --audit-level=high`
+- 使用 `rg` 检查占位实现、跳过测试、疑似密钥、绝对路径、固定线程 ID 和禁止能力。
+- `git diff --check`
+
+### 测试结果
+
+- pytest：33 个测试全部通过；新增覆盖直接回答、单次工具闭环、未知工具拒绝、参数
+  错误后修正、连续重复阻止、最大循环终止、同一模型轮次多工具顺序执行、工具超时、
+  工具异常、工具记录持久化和真实 loop count。
+- Ruff：58 个文件格式检查与 lint 全部通过。
+- mypy：56 个源文件严格类型检查通过。
+- Alembic：空临时数据库升级到 `20260731_0001 (head)`，`alembic check` 无模型
+  漂移；`tool_calls` 表及 run/thread/tool_name 三个既有索引均存在。本阶段复用已
+  批准的 V1 表结构，没有数据库结构变化，因此未创建新 revision。
+- Vitest：2 个测试文件、5 个测试全部通过；新增覆盖工具开始/结果的安全投影和畸形
+  事件忽略。
+- 前端 ESLint、严格 TypeScript 和 production build 全部通过；npm audit 为
+  0 个漏洞。
+- 范围与安全扫描：未发现新增 TODO、`pass`、`NotImplementedError`、跳过测试、
+  真实密钥、硬编码用户绝对路径、固定生产 thread ID 或 Phase 4+ 禁止能力。
+
+### 遗留问题
+
+- 未配置真实外部模型凭据，因此未对特定第三方供应商在线验证流式 tool calling；
+  已通过 httpx MockTransport 验证兼容请求、分块函数参数、ToolMessage 和文本增量，
+  并通过完整 API 集成测试验证工具循环与失败路径。
+- production build 主 JS chunk 约 866 kB（gzip 约 278 kB），Vite 仍给出超过
+  500 kB 提示。维持既定 Phase 6 页面/功能边界拆包计划，不提高阈值掩盖提示。
+
+### 下一阶段
+
+- Phase 4 将实现配置化 `web_search`、安全 `web_fetch`、SSRF 与重定向复检以及
+  来源持久化；本次未实现任何 Phase 4 能力。

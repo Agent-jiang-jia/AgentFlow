@@ -1,15 +1,18 @@
 import { RobotOutlined, UserOutlined } from "@ant-design/icons";
 import { Avatar, Empty, Spin, Typography } from "antd";
 import { useEffect, useMemo, useRef } from "react";
+import { Fragment } from "react";
 import ReactMarkdown from "react-markdown";
 import rehypeHighlight from "rehype-highlight";
 import remarkGfm from "remark-gfm";
 
-import type { Message } from "../types/api";
+import type { Message, ToolActivity } from "../types/api";
+import { ToolStatusLedger } from "./ToolStatusLedger";
 
 interface MessageTimelineProps {
   messages: Message[];
   streamingMessage: Message | null;
+  toolActivities: ToolActivity[];
   loading: boolean;
   streaming: boolean;
   hasThread: boolean;
@@ -19,6 +22,7 @@ interface MessageTimelineProps {
 export function MessageTimeline({
   messages,
   streamingMessage,
+  toolActivities,
   loading,
   streaming,
   hasThread,
@@ -33,7 +37,7 @@ export function MessageTimeline({
 
   useEffect(() => {
     endRef.current?.scrollIntoView({ behavior: "smooth", block: "end" });
-  }, [visibleMessages]);
+  }, [toolActivities, visibleMessages]);
 
   if (loading) {
     return (
@@ -76,47 +80,70 @@ export function MessageTimeline({
       {visibleMessages.map((message) => {
         const isUser = message.role === "user";
         const isLive = streamingMessage?.id === message.id;
+        const runActivities =
+          message.role === "assistant" && message.run_id !== null
+            ? toolActivities.filter(
+                (activity) => activity.runId === message.run_id,
+              )
+            : [];
         return (
-          <article
-            className={`message-entry ${isUser ? "user" : "assistant"}`}
-            key={message.id}
-          >
-            <div className="message-rail">
-              <Avatar
-                size={30}
-                icon={isUser ? <UserOutlined /> : <RobotOutlined />}
-              />
-              <span className="rail-line" />
-            </div>
-            <div className="message-body">
-              <div className="message-meta">
-                <span>{isUser ? "你" : "AgentFlow"}</span>
-                {isLive && (
-                  <span className="live-label">
-                    <i />
-                    正在生成
-                  </span>
-                )}
+          <Fragment key={message.id}>
+            {runActivities.length > 0 && (
+              <ToolStatusLedger activities={runActivities} />
+            )}
+            <article
+              className={`message-entry ${isUser ? "user" : "assistant"}`}
+            >
+              <div className="message-rail">
+                <Avatar
+                  size={30}
+                  icon={isUser ? <UserOutlined /> : <RobotOutlined />}
+                />
+                <span className="rail-line" />
               </div>
-              {isUser ? (
-                <p className="user-copy">{message.content}</p>
-              ) : (
-                <div className="markdown-body">
-                  <ReactMarkdown
-                    remarkPlugins={[remarkGfm]}
-                    rehypePlugins={[rehypeHighlight]}
-                  >
-                    {message.content}
-                  </ReactMarkdown>
-                  {isLive && streaming && message.content.length === 0 && (
-                    <span className="typing-cursor" aria-label="等待模型响应" />
+              <div className="message-body">
+                <div className="message-meta">
+                  <span>{isUser ? "你" : "AgentFlow"}</span>
+                  {isLive && (
+                    <span className="live-label">
+                      <i />
+                      正在生成
+                    </span>
                   )}
                 </div>
-              )}
-            </div>
-          </article>
+                {isUser ? (
+                  <p className="user-copy">{message.content}</p>
+                ) : (
+                  <div className="markdown-body">
+                    <ReactMarkdown
+                      remarkPlugins={[remarkGfm]}
+                      rehypePlugins={[rehypeHighlight]}
+                    >
+                      {message.content}
+                    </ReactMarkdown>
+                    {isLive && streaming && message.content.length === 0 && (
+                      <span
+                        className="typing-cursor"
+                        aria-label="等待模型响应"
+                      />
+                    )}
+                  </div>
+                )}
+              </div>
+            </article>
+          </Fragment>
         );
       })}
+      <ToolStatusLedger
+        activities={toolActivities.filter(
+          (activity) =>
+            !visibleMessages.some(
+              (message) =>
+                message.role === "assistant" &&
+                message.run_id === activity.runId,
+            ),
+        )}
+      />
       <div ref={endRef} />
     </div>
   );

@@ -1,9 +1,9 @@
 # AgentFlow
 
 AgentFlow V1 是面向单用户、本地部署的轻量级单 Agent Web 工作台。本仓库当前完成
-Phase 2：在 Phase 1 基础设施之上提供会话 CRUD、消息与 run 持久化、固定单模型
-普通流式对话，以及可创建、切换和恢复会话的基础 Web 工作台。工具调用、Web 搜索
-和文件能力仍属于后续 Phase。
+Phase 3：在会话与普通流式对话基础上提供 LangGraph 单 Agent 顺序工具循环、统一
+Tool Registry、`get_current_time` 验证工具、工具调用持久化、循环/重复/超时保护，
+以及不展示思维链的前端公开工具状态。Web 搜索和文件能力仍属于后续 Phase。
 
 ## 环境要求
 
@@ -55,21 +55,24 @@ Set-Location backend
 
 健康检查地址为 `http://127.0.0.1:8000/health`。
 
-### 配置聊天模型
+### 配置聊天模型与 Agent Loop
 
-Phase 2 使用一个固定的 OpenAI-compatible `chat/completions` 流式端点。在
-`backend\.env` 中配置：
+Phase 3 使用一个固定的、支持流式 function/tool calling 的 OpenAI-compatible
+`chat/completions` 端点。在 `backend\.env` 中配置：
 
 ```dotenv
 AGENTFLOW_MODEL_API_BASE=https://provider.example/v1
 AGENTFLOW_MODEL_API_KEY=replace-with-local-secret
 AGENTFLOW_MODEL_NAME=replace-with-fixed-model-name
 AGENTFLOW_MODEL_TIMEOUT_SECONDS=60
+AGENTFLOW_MAX_AGENT_LOOPS=10
+AGENTFLOW_TOOL_TIMEOUT_SECONDS=30
 ```
 
 `MODEL_API_BASE` 也可直接填写以 `/chat/completions` 结尾的地址。密钥只从环境变量
 读取，不要提交 `backend\.env`。未配置模型时，会话 CRUD 仍可使用；发送消息会保留
-用户消息、将 run 标记为失败，并通过 SSE 返回安全的模型不可用提示。
+用户消息、将 run 标记为失败，并通过 SSE 返回安全的模型不可用提示。当前注册表只
+包含 Phase 3 的 `get_current_time` 验证工具，不包含尚未开发的 Web 或文件工具。
 
 ## 前端安装与启动
 

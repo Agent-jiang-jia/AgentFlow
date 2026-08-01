@@ -1,13 +1,15 @@
-"""Streaming client for the configured fixed chat model."""
+"""Streaming client for the configured fixed tool-capable chat model."""
 
 import json
-from collections.abc import AsyncIterator, Sequence
+from collections.abc import AsyncIterator, Mapping, Sequence
 from dataclasses import dataclass
 from typing import Protocol
 
 import httpx
+from langchain_core.messages import AIMessage, BaseMessage, HumanMessage, SystemMessage, ToolMessage
 
 from app.core.config import Settings
+from app.tools.base import ToolDefinition
 
 
 class ModelClientError(Exception):
@@ -15,18 +17,32 @@ class ModelClientError(Exception):
 
 
 @dataclass(frozen=True, slots=True)
-class ModelMessage:
-    """A role/content pair sent to the plain chat model."""
+class ModelToolCallDelta:
+    """One streamed fragment of a provider tool call."""
 
-    role: str
-    content: str
+    index: int
+    provider_id: str
+    name: str
+    arguments: str
+
+
+@dataclass(frozen=True, slots=True)
+class ModelStreamChunk:
+    """Provider-neutral assistant text and tool-call deltas."""
+
+    content: str = ""
+    tool_calls: tuple[ModelToolCallDelta, ...] = ()
 
 
 class ChatModel(Protocol):
-    """The minimal streaming model surface required by Phase 2."""
+    """The streaming model surface required by the Phase 3 agent."""
 
-    def stream(self, messages: Sequence[ModelMessage]) -> AsyncIterator[str]:
-        """Yield text deltas for one model response."""
+    def stream(
+        self,
+        messages: Sequence[BaseMessage],
+        tools: Sequence[ToolDefinition],
+    ) -> AsyncIterator[ModelStreamChunk]:
+        """Yield assistant text and tool-call deltas for one model turn."""
         ...
 
 
@@ -54,18 +70,22 @@ class OpenAICompatibleChatModel:
             return self._api_base
         return f"{self._api_base}/chat/completions"
 
-    async def stream(self, messages: Sequence[ModelMessage]) -> AsyncIterator[str]:
-        """Yield content deltas from an OpenAI-compatible SSE response."""
+    async def stream(
+        self,
+        messages: Sequence[BaseMessage],
+        tools: Sequence[ToolDefinition],
+    ) -> AsyncIterator[ModelStreamChunk]:
+        """Yield content and function-call deltas from an OpenAI-compatible stream."""
         headers = {"Accept": "text/event-stream", "Content-Type": "application/json"}
         if self._api_key:
             headers["Authorization"] = f"Bearer {self._api_key}"
-        payload = {
+        payload: dict[str, object] = {
             "model": self._model_name,
-            "messages": [
-                {"role": message.role, "content": message.content} for message in messages
-            ],
+            "messages": [self._serialize_message(message) for message in messages],
             "stream": True,
         }
+        if tools:
+            payload["tools"] = [tool.as_openai_tool() for tool in tools]
 
         try:
             async with (
@@ -84,27 +104,94 @@ class OpenAICompatibleChatModel:
                     data = line[5:].strip()
                     if not data or data == "[DONE]":
                         continue
-                    yield self._content_delta(data)
+                    yield self._stream_chunk(data)
         except ModelClientError:
             raise
         except (httpx.HTTPError, json.JSONDecodeError, KeyError, TypeError, ValueError) as exc:
             raise ModelClientError("Model request failed") from exc
 
+    @classmethod
+    def _serialize_message(cls, message: BaseMessage) -> dict[str, object]:
+        content = cls._text_content(message)
+        if isinstance(message, HumanMessage):
+            return {"role": "user", "content": content}
+        if isinstance(message, SystemMessage):
+            return {"role": "system", "content": content}
+        if isinstance(message, ToolMessage):
+            return {
+                "role": "tool",
+                "content": content,
+                "tool_call_id": message.tool_call_id,
+            }
+        if isinstance(message, AIMessage):
+            payload: dict[str, object] = {"role": "assistant", "content": content}
+            tool_calls = message.additional_kwargs.get("tool_calls")
+            if isinstance(tool_calls, list) and tool_calls:
+                payload["tool_calls"] = tool_calls
+            return payload
+        raise ModelClientError("Unsupported model message role")
+
     @staticmethod
-    def _content_delta(data: str) -> str:
+    def _text_content(message: BaseMessage) -> str:
+        if not isinstance(message.content, str):
+            raise ModelClientError("Non-text model messages are not supported")
+        return message.content
+
+    @staticmethod
+    def _stream_chunk(data: str) -> ModelStreamChunk:
         payload = json.loads(data)
         choices = payload["choices"]
         if not isinstance(choices, list) or not choices:
-            return ""
+            return ModelStreamChunk()
         choice = choices[0]
-        if not isinstance(choice, dict):
+        if not isinstance(choice, Mapping):
             raise TypeError("Invalid model choice")
         delta = choice.get("delta", {})
-        if not isinstance(delta, dict):
+        if not isinstance(delta, Mapping):
             raise TypeError("Invalid model delta")
+
         content = delta.get("content", "")
         if content is None:
-            return ""
+            content = ""
         if not isinstance(content, str):
             raise TypeError("Invalid model content")
-        return content
+
+        raw_tool_calls = delta.get("tool_calls", [])
+        if raw_tool_calls is None:
+            raw_tool_calls = []
+        if not isinstance(raw_tool_calls, list):
+            raise TypeError("Invalid model tool calls")
+        tool_call_deltas = tuple(
+            OpenAICompatibleChatModel._tool_call_delta(item) for item in raw_tool_calls
+        )
+        return ModelStreamChunk(content=content, tool_calls=tool_call_deltas)
+
+    @staticmethod
+    def _tool_call_delta(raw_call: object) -> ModelToolCallDelta:
+        if not isinstance(raw_call, Mapping):
+            raise TypeError("Invalid model tool call")
+        index = raw_call.get("index")
+        if not isinstance(index, int) or index < 0:
+            raise TypeError("Invalid model tool call index")
+        provider_id = raw_call.get("id", "")
+        if provider_id is None:
+            provider_id = ""
+        if not isinstance(provider_id, str):
+            raise TypeError("Invalid model tool call id")
+        function = raw_call.get("function", {})
+        if not isinstance(function, Mapping):
+            raise TypeError("Invalid model function call")
+        name = function.get("name", "")
+        arguments = function.get("arguments", "")
+        if name is None:
+            name = ""
+        if arguments is None:
+            arguments = ""
+        if not isinstance(name, str) or not isinstance(arguments, str):
+            raise TypeError("Invalid model function call fields")
+        return ModelToolCallDelta(
+            index=index,
+            provider_id=provider_id,
+            name=name,
+            arguments=arguments,
+        )

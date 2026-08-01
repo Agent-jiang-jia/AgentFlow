@@ -44,3 +44,19 @@ export interface SseEvent {
   timestamp: string;
   data: Record<string, unknown>;
 }
+
+export type ToolActivityStatus =
+  | "running"
+  | "success"
+  | "failed"
+  | "timeout"
+  | "rejected";
+
+export interface ToolActivity {
+  toolCallId: string;
+  runId: string;
+  toolName: string;
+  displayName: string;
+  status: ToolActivityStatus;
+  summary: string | null;
+}

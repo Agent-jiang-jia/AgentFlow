@@ -377,6 +377,97 @@ textarea:focus-visible {
   margin-top: 32px;
 }
 
+.tool-ledger {
+  margin: 22px 0 26px 48px;
+  border: 1px solid #cfd9d3;
+  border-radius: 3px 11px 11px 3px;
+  background:
+    linear-gradient(90deg, #2f6f5a 0 3px, transparent 3px),
+    #f5f8f6;
+  box-shadow: 0 7px 20px rgb(37 64 53 / 5%);
+}
+
+.tool-ledger-heading {
+  display: flex;
+  justify-content: space-between;
+  padding: 8px 12px 7px 16px;
+  border-bottom: 1px solid #dce4df;
+  color: #71847b;
+  font-family: "Cascadia Mono", Consolas, monospace;
+  font-size: 9px;
+  letter-spacing: 0.13em;
+}
+
+.tool-step {
+  display: grid;
+  min-height: 58px;
+  grid-template-columns: 28px 22px minmax(0, 1fr) auto;
+  align-items: center;
+  gap: 8px;
+  padding: 9px 12px 9px 15px;
+}
+
+.tool-step + .tool-step {
+  border-top: 1px solid #e0e7e3;
+}
+
+.tool-step-index,
+.tool-step-status {
+  color: #82918a;
+  font-family: "Cascadia Mono", Consolas, monospace;
+  font-size: 9px;
+}
+
+.tool-step-icon {
+  color: #2a795f;
+  font-size: 14px;
+}
+
+.tool-step.failed .tool-step-icon,
+.tool-step.timeout .tool-step-icon,
+.tool-step.rejected .tool-step-icon {
+  color: #a45145;
+}
+
+.tool-step-copy {
+  display: flex;
+  min-width: 0;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.tool-step-copy strong {
+  color: #33413b;
+  font-size: 12px;
+  font-weight: 650;
+}
+
+.tool-step-copy small {
+  overflow: hidden;
+  color: #718078;
+  font-size: 11px;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.tool-step-status {
+  padding: 3px 6px;
+  border-radius: 999px;
+  background: #e7eeea;
+}
+
+.tool-step.success .tool-step-status {
+  color: #1f7155;
+  background: #ddf0e6;
+}
+
+.tool-step.failed .tool-step-status,
+.tool-step.timeout .tool-step-status,
+.tool-step.rejected .tool-step-status {
+  color: #8e453b;
+  background: #f3e4e1;
+}
+
 .message-rail {
   display: flex;
   align-items: center;
@@ -714,6 +805,18 @@ textarea:focus-visible {
 
   .message-timeline {
     padding-top: 28px;
+  }
+
+  .tool-ledger {
+    margin-left: 48px;
+  }
+
+  .tool-step {
+    grid-template-columns: 22px 20px minmax(0, 1fr);
+  }
+
+  .tool-step-status {
+    display: none;
   }
 
   .workspace-alert {
